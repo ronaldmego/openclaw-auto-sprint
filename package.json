@@ -1,0 +1,12 @@
+{
+  "name": "pepa-dashboard",
+  "version": "1.0.0",
+  "description": "Pepa Ops - Task tracking & deliverables dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

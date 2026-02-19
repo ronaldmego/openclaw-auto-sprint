@@ -1,0 +1,329 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+
+const app = express();
+const PORT = 3401;
+const HOST = '100.64.216.28';
+const DB_FILE = path.join(__dirname, 'data', 'tasks.json');
+const LOG_FILE = path.join(__dirname, 'data', 'activity.json');
+
+// Simple JSON "database"
+function loadDB() {
+  try {
+    const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    // Fix nextId to always be above max existing id
+    const maxId = data.tasks.reduce((m, t) => Math.max(m, t.id || 0), 0);
+    if (data.nextId <= maxId) data.nextId = maxId + 1;
+    return data;
+  }
+  catch { return { tasks: [], nextId: 1 }; }
+}
+
+function loadLogs() {
+  try { return JSON.parse(fs.readFileSync(LOG_FILE, 'utf8')); }
+  catch { return []; }
+}
+function addLog(type, message) {
+  const logs = loadLogs();
+  logs.unshift({ type, message, timestamp: new Date().toISOString() });
+  // Keep last 200 entries
+  if (logs.length > 200) logs.length = 200;
+  fs.writeFileSync(LOG_FILE, JSON.stringify(logs, null, 2));
+}
+function saveDB(db) {
+  fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
+  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+}
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// API: Get TOOLS.md content (APIs/Skills inventory)
+app.get('/api/tools', (req, res) => {
+  const toolsPath = path.join(process.env.HOME || '/home/adminmgo', '.openclaw/workspace/TOOLS.md');
+  try {
+    const content = fs.readFileSync(toolsPath, 'utf8');
+    res.json({ content });
+  } catch (e) {
+    res.status(404).json({ error: 'TOOLS.md not found' });
+  }
+});
+
+app.get('/api/reglas', (req, res) => {
+  const reglasPath = path.join(process.env.HOME || '/home/adminmgo', '.openclaw/workspace/OCC-GOLDEN-RULES.md');
+  try {
+    const content = fs.readFileSync(reglasPath, 'utf8');
+    res.json({ content });
+  } catch (e) {
+    res.status(404).json({ error: 'REGLAS-DE-ORO.md not found' });
+  }
+});
+
+// API: Get brain files (workspace .md files for visibility)
+app.get('/api/brain', (req, res) => {
+  const ws = path.join(process.env.HOME || '/home/adminmgo', '.openclaw/workspace');
+  const ALLOWED_ROOT = ['SOUL.md', 'IDENTITY.md', 'USER.md', 'MEMORY.md', 'AGENTS.md', 'HEARTBEAT.md'];
+  const result = {};
+
+  // Root files
+  for (const f of ALLOWED_ROOT) {
+    try { result[f] = fs.readFileSync(path.join(ws, f), 'utf8'); } catch {}
+  }
+
+  // Daily memory files (last 7 days)
+  const memDir = path.join(ws, 'memory');
+  try {
+    const files = fs.readdirSync(memDir)
+      .filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f))
+      .sort()
+      .slice(-7);
+    for (const f of files) {
+      try { result['memory/' + f] = fs.readFileSync(path.join(memDir, f), 'utf8'); } catch {}
+    }
+  } catch {}
+
+  res.json(result);
+});
+
+// API: Get all tasks
+app.get('/api/tasks', (req, res) => {
+  const db = loadDB();
+  let tasks = db.tasks.filter(t => t.status !== 'archived');
+  if (req.query.status) tasks = tasks.filter(t => t.status === req.query.status);
+  // Sort: doing first, then todo, then done
+  const order = { doing: 1, todo: 2, done: 3 };
+  tasks.sort((a, b) => (order[a.status]||4) - (order[b.status]||4) || new Date(b.created_at) - new Date(a.created_at));
+  res.json(tasks);
+});
+
+// API: Create task
+app.post('/api/tasks', (req, res) => {
+  const db = loadDB();
+  const { title, description, deliverable_type, deliverable_url, priority, assignee, drive_link, github_link, project_ref, parent_id, due_date, status } = req.body;
+  const validStatuses = ['todo', 'doing', 'done', 'routine'];
+  const task = {
+    id: db.nextId++,
+    title,
+    description: description || null,
+    deliverable_type: deliverable_type || 'other',
+    deliverable_url: deliverable_url || null,
+    status: validStatuses.includes(status) ? status : 'todo',
+    priority: priority || 'normal',
+    assignee: assignee || 'pepa',
+    drive_link: drive_link || null,
+    github_link: github_link || null,
+    project_ref: project_ref || null,
+    parent_id: parent_id || null,
+    due_date: due_date || null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    completed_at: null,
+    reviewed_by_ronald: false
+  };
+  db.tasks.push(task);
+  saveDB(db);
+  addLog('task_created', `#${task.id} ${task.title}`);
+  res.json(task);
+});
+
+// API: Update task
+app.patch('/api/tasks/:id', (req, res) => {
+  const db = loadDB();
+  const id = parseInt(req.params.id);
+  const task = db.tasks.find(t => t.id === id);
+  if (!task) return res.status(404).json({ error: 'not found' });
+  
+  const allowed = ['title', 'description', 'deliverable_type', 'deliverable_url', 'status', 'priority', 'reviewed_by_ronald', 'assignee', 'drive_link', 'github_link', 'project_ref', 'parent_id', 'due_date', 'blocked_by', 'ticket_type'];
+  for (const [key, val] of Object.entries(req.body)) {
+    if (allowed.includes(key)) task[key] = val;
+  }
+  if (!task.comments) task.comments = [];
+  if (req.body.status === 'done' && !task.completed_at) {
+    task.completed_at = new Date().toISOString();
+  }
+  task.updated_at = new Date().toISOString();
+  saveDB(db);
+  const changes = Object.keys(req.body).join(',');
+  addLog('task_updated', `#${task.id} ${task.title} [${changes}→${req.body.status||'edit'}]`);
+  res.json(task);
+});
+
+// API: Add comment to task
+app.post('/api/tasks/:id/comments', (req, res) => {
+  const db = loadDB();
+  const id = parseInt(req.params.id);
+  const task = db.tasks.find(t => t.id === id);
+  if (!task) return res.status(404).json({ error: 'not found' });
+  if (!task.comments) task.comments = [];
+  const { author, text } = req.body;
+  if (!text || !text.trim()) return res.status(400).json({ error: 'text required' });
+  const comment = {
+    id: Date.now(),
+    author: author || 'Ronald',
+    text: text.trim(),
+    timestamp: new Date().toISOString()
+  };
+  task.comments.push(comment);
+  task.updated_at = new Date().toISOString();
+  saveDB(db);
+  addLog('comment_added', `#${task.id} ${task.title} — ${comment.author}: "${text.trim().slice(0,60)}"`);
+  res.json(comment);
+});
+
+// API: Delete comment from task
+app.delete('/api/tasks/:id/comments/:commentId', (req, res) => {
+  const db = loadDB();
+  const task = db.tasks.find(t => t.id === parseInt(req.params.id));
+  if (!task) return res.status(404).json({ error: 'not found' });
+  if (!task.comments) return res.json({ ok: true });
+  task.comments = task.comments.filter(c => c.id !== parseInt(req.params.commentId));
+  saveDB(db);
+  res.json({ ok: true });
+});
+
+// API: Delete task
+app.delete('/api/tasks/:id', (req, res) => {
+  const db = loadDB();
+  db.tasks = db.tasks.filter(t => t.id !== parseInt(req.params.id));
+  saveDB(db);
+  res.json({ ok: true });
+});
+
+// API: Stats
+app.get('/api/stats', (req, res) => {
+  const db = loadDB();
+  const active = db.tasks.filter(t => t.status !== 'archived');
+  const weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
+  res.json({
+    todo: active.filter(t => t.status === 'todo').length,
+    doing: active.filter(t => t.status === 'doing').length,
+    done: active.filter(t => t.status === 'done').length,
+    done_this_week: active.filter(t => t.status === 'done' && t.completed_at >= weekAgo).length,
+    pending_review: active.filter(t => t.status === 'done' && !t.reviewed_by_ronald).length,
+    ronald_pending: active.filter(t => t.assignee === 'ronald' && t.status !== 'done').length,
+    pepa_active: active.filter(t => t.assignee === 'pepa' && ['doing','todo'].includes(t.status)).length,
+  });
+});
+
+// API: Task aging analytics
+app.get('/api/aging', (req, res) => {
+  const db = loadDB();
+  const now = new Date();
+  const active = db.tasks.filter(t => t.status !== 'archived');
+  
+  const aging = active.map(task => {
+    const created = new Date(task.created_at);
+    const lastUpdate = new Date(task.updated_at);
+    const ageHours = Math.floor((now - created) / (1000 * 60 * 60));
+    const staleDays = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+    
+    return {
+      id: task.id,
+      title: task.title,
+      status: task.status,
+      assignee: task.assignee,
+      priority: task.priority,
+      ageHours,
+      staleDays,
+      project_ref: task.project_ref,
+      isStale: staleDays >= 2, // 2+ days without update
+      isAncient: ageHours >= 168 // 1+ week old
+    };
+  });
+  
+  // Sort by stale days desc, then by age desc
+  aging.sort((a, b) => b.staleDays - a.staleDays || b.ageHours - a.ageHours);
+  
+  const metrics = {
+    stale_tasks: aging.filter(t => t.isStale && t.status !== 'done').length,
+    ancient_tasks: aging.filter(t => t.isAncient && t.status !== 'done').length,
+    avg_completion_hours: 0,
+    oldest_active: aging.find(t => t.status !== 'done')?.ageHours || 0
+  };
+  
+  // Calculate average completion time for done tasks in last 30 days
+  const recentDone = active.filter(t => 
+    t.status === 'done' && 
+    t.completed_at && 
+    new Date(t.completed_at) > new Date(now - 30*24*60*60*1000)
+  );
+  
+  if (recentDone.length > 0) {
+    const totalHours = recentDone.reduce((sum, task) => {
+      const created = new Date(task.created_at);
+      const completed = new Date(task.completed_at);
+      return sum + Math.floor((completed - created) / (1000 * 60 * 60));
+    }, 0);
+    metrics.avg_completion_hours = Math.round(totalHours / recentDone.length);
+  }
+  
+  res.json({
+    metrics,
+    tasks: aging.slice(0, 20) // Top 20 by staleness
+  });
+});
+
+// API: Search memory files
+app.get('/api/search', (req, res) => {
+  const q = (req.query.q || '').toLowerCase().trim();
+  if (!q) return res.json([]);
+  const memDir = '/home/adminmgo/.openclaw/workspace/memory';
+  const results = [];
+  try {
+    const files = fs.readdirSync(memDir).filter(f => f.endsWith('.md'));
+    for (const file of files) {
+      const content = fs.readFileSync(path.join(memDir, file), 'utf8');
+      const lines = content.split('\n');
+      lines.forEach((line, i) => {
+        if (line.toLowerCase().includes(q)) {
+          results.push({ file, line: i + 1, text: line.trim(), context: lines.slice(Math.max(0, i-1), i+2).join(' ').trim() });
+        }
+      });
+    }
+  } catch(e) {}
+  res.json(results.slice(0, 50));
+});
+
+// API: Activity log
+app.get('/api/activity', (req, res) => {
+  const logs = loadLogs();
+  const limit = parseInt(req.query.limit) || 50;
+  res.json(logs.slice(0, limit));
+});
+
+// API: Cron check-in (crons POST here to prove they ran)
+// Saves a log file per execution for traceability
+app.post('/api/checkin', (req, res) => {
+  const { source, summary, details } = req.body;
+  addLog('cron_checkin', `[${source || 'unknown'}] ${summary || 'check-in'}`);
+  // Save detailed log file
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const fname = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}-${source || 'unknown'}.md`;
+  const logDir = path.join(__dirname, 'data', 'logs');
+  fs.mkdirSync(logDir, { recursive: true });
+  const content = `# ${source || 'unknown'} — ${now.toISOString()}\n\n## Summary\n${summary || 'No summary'}\n\n## Details\n${details || 'No details provided'}\n`;
+  fs.writeFileSync(path.join(logDir, fname), content);
+  res.json({ ok: true, logFile: fname });
+});
+
+// API: List routine logs
+app.get('/api/logs', (req, res) => {
+  const logDir = path.join(__dirname, 'data', 'logs');
+  try {
+    const files = fs.readdirSync(logDir).filter(f => f.endsWith('.md') && f !== 'README.md').sort().reverse();
+    const limit = parseInt(req.query.limit) || 50;
+    const source = req.query.source;
+    const filtered = source ? files.filter(f => f.includes(source)) : files;
+    const result = filtered.slice(0, limit).map(f => ({
+      file: f,
+      content: fs.readFileSync(path.join(logDir, f), 'utf8')
+    }));
+    res.json(result);
+  } catch { res.json([]); }
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`🐷 Pepa Ops Dashboard running at http://${HOST}:${PORT}`);
+});
