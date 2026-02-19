@@ -1,10 +1,18 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+
+try { require('dotenv').config(); } catch {}
 
 const app = express();
-const PORT = 3401;
-const HOST = '100.64.216.28';
+const PORT = process.env.OCC_PORT || 3401;
+const HOST = process.env.OCC_HOST || '127.0.0.1';
+const WORKSPACE = process.env.OCC_WORKSPACE || path.join(os.homedir(), '.openclaw', 'workspace');
+const HUMAN_NAME = process.env.OCC_HUMAN_NAME || 'Human';
+const AGENT_NAME = process.env.OCC_AGENT_NAME || 'Agent';
+const DEFAULT_ASSIGNEE = process.env.OCC_DEFAULT_ASSIGNEE || 'agent';
+const DEFAULT_AUTHOR = process.env.OCC_DEFAULT_AUTHOR || 'Human';
 const DB_FILE = path.join(__dirname, 'data', 'tasks.json');
 const LOG_FILE = path.join(__dirname, 'data', 'activity.json');
 
@@ -39,9 +47,19 @@ function saveDB(db) {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// API: Config (display names for the UI)
+app.get('/api/config', (req, res) => {
+  res.json({
+    humanName: HUMAN_NAME,
+    agentName: AGENT_NAME,
+    defaultAssignee: DEFAULT_ASSIGNEE,
+    defaultAuthor: DEFAULT_AUTHOR,
+  });
+});
+
 // API: Get TOOLS.md content (APIs/Skills inventory)
 app.get('/api/tools', (req, res) => {
-  const toolsPath = path.join(process.env.HOME || '/home/adminmgo', '.openclaw/workspace/TOOLS.md');
+  const toolsPath = path.join(WORKSPACE, 'TOOLS.md');
   try {
     const content = fs.readFileSync(toolsPath, 'utf8');
     res.json({ content });
@@ -51,28 +69,27 @@ app.get('/api/tools', (req, res) => {
 });
 
 app.get('/api/reglas', (req, res) => {
-  const reglasPath = path.join(process.env.HOME || '/home/adminmgo', '.openclaw/workspace/OCC-GOLDEN-RULES.md');
+  const reglasPath = path.join(WORKSPACE, 'OCC-GOLDEN-RULES.md');
   try {
     const content = fs.readFileSync(reglasPath, 'utf8');
     res.json({ content });
   } catch (e) {
-    res.status(404).json({ error: 'REGLAS-DE-ORO.md not found' });
+    res.status(404).json({ error: 'OCC-GOLDEN-RULES.md not found' });
   }
 });
 
 // API: Get brain files (workspace .md files for visibility)
 app.get('/api/brain', (req, res) => {
-  const ws = path.join(process.env.HOME || '/home/adminmgo', '.openclaw/workspace');
   const ALLOWED_ROOT = ['SOUL.md', 'IDENTITY.md', 'USER.md', 'MEMORY.md', 'AGENTS.md', 'HEARTBEAT.md'];
   const result = {};
 
   // Root files
   for (const f of ALLOWED_ROOT) {
-    try { result[f] = fs.readFileSync(path.join(ws, f), 'utf8'); } catch {}
+    try { result[f] = fs.readFileSync(path.join(WORKSPACE, f), 'utf8'); } catch {}
   }
 
   // Daily memory files (last 7 days)
-  const memDir = path.join(ws, 'memory');
+  const memDir = path.join(WORKSPACE, 'memory');
   try {
     const files = fs.readdirSync(memDir)
       .filter(f => /^\d{4}-\d{2}-\d{2}\.md$/.test(f))
@@ -110,7 +127,7 @@ app.post('/api/tasks', (req, res) => {
     deliverable_url: deliverable_url || null,
     status: validStatuses.includes(status) ? status : 'todo',
     priority: priority || 'normal',
-    assignee: assignee || 'pepa',
+    assignee: assignee || DEFAULT_ASSIGNEE,
     drive_link: drive_link || null,
     github_link: github_link || null,
     project_ref: project_ref || null,
@@ -119,7 +136,7 @@ app.post('/api/tasks', (req, res) => {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     completed_at: null,
-    reviewed_by_ronald: false
+    reviewed_by_owner: false
   };
   db.tasks.push(task);
   saveDB(db);
@@ -133,8 +150,8 @@ app.patch('/api/tasks/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const task = db.tasks.find(t => t.id === id);
   if (!task) return res.status(404).json({ error: 'not found' });
-  
-  const allowed = ['title', 'description', 'deliverable_type', 'deliverable_url', 'status', 'priority', 'reviewed_by_ronald', 'assignee', 'drive_link', 'github_link', 'project_ref', 'parent_id', 'due_date', 'blocked_by', 'ticket_type'];
+
+  const allowed = ['title', 'description', 'deliverable_type', 'deliverable_url', 'status', 'priority', 'reviewed_by_owner', 'assignee', 'drive_link', 'github_link', 'project_ref', 'parent_id', 'due_date', 'blocked_by', 'ticket_type'];
   for (const [key, val] of Object.entries(req.body)) {
     if (allowed.includes(key)) task[key] = val;
   }
@@ -160,7 +177,7 @@ app.post('/api/tasks/:id/comments', (req, res) => {
   if (!text || !text.trim()) return res.status(400).json({ error: 'text required' });
   const comment = {
     id: Date.now(),
-    author: author || 'Ronald',
+    author: author || DEFAULT_AUTHOR,
     text: text.trim(),
     timestamp: new Date().toISOString()
   };
@@ -200,9 +217,9 @@ app.get('/api/stats', (req, res) => {
     doing: active.filter(t => t.status === 'doing').length,
     done: active.filter(t => t.status === 'done').length,
     done_this_week: active.filter(t => t.status === 'done' && t.completed_at >= weekAgo).length,
-    pending_review: active.filter(t => t.status === 'done' && !t.reviewed_by_ronald).length,
-    ronald_pending: active.filter(t => t.assignee === 'ronald' && t.status !== 'done').length,
-    pepa_active: active.filter(t => t.assignee === 'pepa' && ['doing','todo'].includes(t.status)).length,
+    pending_review: active.filter(t => t.status === 'done' && !t.reviewed_by_owner).length,
+    human_pending: active.filter(t => t.assignee === 'human' && t.status !== 'done').length,
+    agent_active: active.filter(t => t.assignee === 'agent' && ['doing','todo'].includes(t.status)).length,
   });
 });
 
@@ -211,13 +228,13 @@ app.get('/api/aging', (req, res) => {
   const db = loadDB();
   const now = new Date();
   const active = db.tasks.filter(t => t.status !== 'archived');
-  
+
   const aging = active.map(task => {
     const created = new Date(task.created_at);
     const lastUpdate = new Date(task.updated_at);
     const ageHours = Math.floor((now - created) / (1000 * 60 * 60));
     const staleDays = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
-    
+
     return {
       id: task.id,
       title: task.title,
@@ -231,24 +248,24 @@ app.get('/api/aging', (req, res) => {
       isAncient: ageHours >= 168 // 1+ week old
     };
   });
-  
+
   // Sort by stale days desc, then by age desc
   aging.sort((a, b) => b.staleDays - a.staleDays || b.ageHours - a.ageHours);
-  
+
   const metrics = {
     stale_tasks: aging.filter(t => t.isStale && t.status !== 'done').length,
     ancient_tasks: aging.filter(t => t.isAncient && t.status !== 'done').length,
     avg_completion_hours: 0,
     oldest_active: aging.find(t => t.status !== 'done')?.ageHours || 0
   };
-  
+
   // Calculate average completion time for done tasks in last 30 days
-  const recentDone = active.filter(t => 
-    t.status === 'done' && 
-    t.completed_at && 
+  const recentDone = active.filter(t =>
+    t.status === 'done' &&
+    t.completed_at &&
     new Date(t.completed_at) > new Date(now - 30*24*60*60*1000)
   );
-  
+
   if (recentDone.length > 0) {
     const totalHours = recentDone.reduce((sum, task) => {
       const created = new Date(task.created_at);
@@ -257,7 +274,7 @@ app.get('/api/aging', (req, res) => {
     }, 0);
     metrics.avg_completion_hours = Math.round(totalHours / recentDone.length);
   }
-  
+
   res.json({
     metrics,
     tasks: aging.slice(0, 20) // Top 20 by staleness
@@ -268,7 +285,7 @@ app.get('/api/aging', (req, res) => {
 app.get('/api/search', (req, res) => {
   const q = (req.query.q || '').toLowerCase().trim();
   if (!q) return res.json([]);
-  const memDir = '/home/adminmgo/.openclaw/workspace/memory';
+  const memDir = path.join(WORKSPACE, 'memory');
   const results = [];
   try {
     const files = fs.readdirSync(memDir).filter(f => f.endsWith('.md'));
@@ -325,5 +342,5 @@ app.get('/api/logs', (req, res) => {
 });
 
 app.listen(PORT, HOST, () => {
-  console.log(`🐷 Pepa Ops Dashboard running at http://${HOST}:${PORT}`);
+  console.log(`OCC Dashboard running at http://${HOST}:${PORT}`);
 });

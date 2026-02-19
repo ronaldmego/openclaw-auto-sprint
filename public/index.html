@@ -4,21 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<title>🐷 OCC — OpenClaw Command Center</title>
+<title>OCC — OpenClaw Command Center</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
-  
+
   .header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
   .header h1 { font-size: 18px; color: #f0f6fc; }
   .header h1 span { color: #f78166; }
-  
+
   .stats { display: flex; gap: 8px; padding: 12px 20px; flex-wrap: wrap; }
   .stat { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 14px; min-width: 80px; text-align: center; flex: 1; }
   .stat .num { font-size: 24px; font-weight: bold; }
   .stat .label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-  .stat.ronald .num { color: #f78166; }
-  .stat.pepa .num { color: #bc8cff; }
+  .stat.human .num { color: #f78166; }
+  .stat.agent .num { color: #bc8cff; }
   .stat.done .num { color: #3fb950; }
   .stat.review .num { color: #d29922; }
 
@@ -34,9 +34,9 @@
   .section { padding: 12px 20px; }
   .section-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
   .section-title .count { font-size: 12px; color: #8b949e; font-weight: 400; }
-  
+
   .cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  
+
   .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; transition: border-color 0.2s; }
   .card:hover { border-color: #58a6ff; }
   .card.critical { border-left: 3px solid #f85149; }
@@ -46,7 +46,7 @@
   .task-id:hover { background: rgba(88,166,255,0.25); }
   .card-desc { font-size: 12px; color: #8b949e; margin-bottom: 8px; line-height: 1.4; }
   .card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  
+
   .badge { font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
   .badge-security { background: #3d1f1f; color: #f85149; }
   .badge-content { background: #2a1a2e; color: #bc8cff; }
@@ -61,13 +61,13 @@
   .badge-review { background: #3d2a0f; color: #f78166; }
   .badge-reviewed { background: #1f3d2a; color: #3fb950; }
   .badge-routine { background: #2a2a0f; color: #d29922; }
-  
+
   .card-links { display: flex; gap: 8px; margin-top: 8px; }
   .card-link { font-size: 11px; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-weight: 600; }
   .link-drive { background: #1a2332; color: #79c0ff; border: 1px solid #30363d; }
   .link-github { background: #1f2a1a; color: #3fb950; border: 1px solid #30363d; }
   .link-drive:hover, .link-github:hover { opacity: 0.8; }
-  
+
   .card-actions { display: flex; gap: 4px; margin-top: 8px; }
   .card-actions button { font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; }
   .card-actions button:hover { background: #30363d; }
@@ -92,7 +92,7 @@
   .search-bar { margin: 0 20px 12px; display: flex; gap: 8px; }
   .search-bar input { flex: 1; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
   .search-bar button { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
-  
+
   .filters-bar { margin: 0 20px 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .filters-bar select { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 10px; border-radius: 6px; font-size: 12px; }
   .filters-bar .filter-label { font-size: 12px; color: #8b949e; font-weight: 600; }
@@ -139,7 +139,7 @@
 <body>
 
 <div class="header">
-  <h1>🐷 <span>OCC</span> — OpenClaw Command Center</h1>
+  <h1><span>OCC</span> — OpenClaw Command Center</h1>
   <div style="text-align:right">
     <div id="clock" style="color:#8b949e;font-size:13px"></div>
     <div id="last-pulse" style="color:#484f58;font-size:11px"></div>
@@ -160,26 +160,26 @@
 <!-- Tab: Board -->
 <div class="tab-content active" id="tab-board">
   <div class="filters">
-    <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">Todas</button>
-    <button class="filter-btn" id="filter-ronald" onclick="setFilter('ronald')">👤 Ronald</button>
-    <button class="filter-btn" id="filter-pepa" onclick="setFilter('pepa')">🐷 Pepa</button>
+    <button class="filter-btn active" id="filter-all" onclick="setFilter('all')">All</button>
+    <button class="filter-btn" id="filter-human" onclick="setFilter('human')">👤 <span class="human-name-label">Human</span></button>
+    <button class="filter-btn" id="filter-agent" onclick="setFilter('agent')">🤖 <span class="agent-name-label">Agent</span></button>
   </div>
   <div class="search-bar">
-    <input type="text" id="search-input" placeholder="🔍 Buscar en memoria..." onkeyup="if(event.key==='Enter')searchMemory()">
+    <input type="text" id="search-input" placeholder="🔍 Search memory..." onkeyup="if(event.key==='Enter')searchMemory()">
     <button onclick="searchMemory()">Search</button>
   </div>
   <div id="search-results"></div>
 
   <div class="filters-bar">
-    <span class="filter-label">Filtros:</span>
+    <span class="filter-label">Filters:</span>
     <select id="filter-priority" onchange="applyAdvancedFilters()">
-      <option value="">Todas las prioridades</option>
-      <option value="high">🔴 Alta</option>
+      <option value="">All priorities</option>
+      <option value="high">🔴 High</option>
       <option value="normal">Normal</option>
-      <option value="low">Baja</option>
+      <option value="low">Low</option>
     </select>
     <select id="filter-type" onchange="applyAdvancedFilters()">
-      <option value="">Todos los tipos</option>
+      <option value="">All types</option>
       <option value="dev">Development</option>
       <option value="content">Content</option>
       <option value="ops">Operations</option>
@@ -189,37 +189,37 @@
       <option value="other">Other</option>
     </select>
     <select id="filter-status" onchange="applyAdvancedFilters()">
-      <option value="">Todos los estados</option>
+      <option value="">All statuses</option>
       <option value="todo">📋 Todo</option>
       <option value="doing">⚡ Doing</option>
       <option value="done">✅ Done</option>
       <option value="routine">🔄 Routine</option>
     </select>
-    <button class="clear-filters" onclick="clearAdvancedFilters()">Limpiar</button>
+    <button class="clear-filters" onclick="clearAdvancedFilters()">Clear</button>
   </div>
 
   <details style="margin: 0 20px 8px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:4px 12px;">
-    <summary style="cursor:pointer;color:#58a6ff;font-size:14px;font-weight:600;padding:8px 0;">➕ Nueva tarea</summary>
+    <summary style="cursor:pointer;color:#58a6ff;font-size:14px;font-weight:600;padding:8px 0;">➕ New task</summary>
     <div class="add-form" style="margin-top:8px;">
       <div class="form-row">
-        <input type="text" id="f-title" placeholder="Título de la tarea">
-        <select id="f-assignee"><option value="pepa">🐷 Pepa</option><option value="ronald">👤 Ronald</option></select>
-        <select id="f-priority"><option value="normal">Normal</option><option value="high">🔴 Alta</option></select>
+        <input type="text" id="f-title" placeholder="Task title">
+        <select id="f-assignee"></select>
+        <select id="f-priority"><option value="normal">Normal</option><option value="high">🔴 High</option></select>
       </div>
       <div class="form-row">
-        <textarea id="f-desc" placeholder="Descripción"></textarea>
+        <textarea id="f-desc" placeholder="Description"></textarea>
       </div>
       <div class="form-row">
-        <input type="text" id="f-project" placeholder="Proyecto: nombre — IP:puerto (opcional)">
+        <input type="text" id="f-project" placeholder="Project reference (optional)">
       </div>
       <div class="form-row">
         <label for="f-due" style="color:#8b949e;font-size:12px">📅 Due date</label>
         <input type="date" id="f-due" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:6px 10px">
       </div>
       <div class="form-row">
-        <input type="text" id="f-drive" placeholder="Drive link (opcional)">
-        <input type="text" id="f-github" placeholder="GitHub link (opcional)">
-        <button class="btn-add" onclick="addTask()">Crear</button>
+        <input type="text" id="f-drive" placeholder="Drive link (optional)">
+        <input type="text" id="f-github" placeholder="GitHub link (optional)">
+        <button class="btn-add" onclick="addTask()">Create</button>
       </div>
     </div>
   </details>
@@ -239,7 +239,7 @@
     </div>
   </div>
   <div class="routine-section" style="margin:0 20px 12px;">
-    <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;color:#d29922;">🔄 Rutinas <span id="routine-count" style="font-size:11px;color:#8b949e;font-weight:400;"></span></div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;color:#d29922;">🔄 Routines <span id="routine-count" style="font-size:11px;color:#8b949e;font-weight:400;"></span></div>
     <div class="cards" id="cards-routine"></div>
   </div>
 
@@ -259,7 +259,7 @@
       <!-- Aging stats will be loaded here -->
     </div>
   </div>
-  
+
   <div class="section">
     <div class="section-title">⚠️ Tasks Needing Attention</div>
     <div class="cards" id="stale-tasks">
@@ -282,16 +282,16 @@
     <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px;">
       <h2 style="color:#f78166;font-size:16px;margin-bottom:12px;">🚀 Quickstart</h2>
       <div style="font-size:13px;line-height:1.7;color:#c9d1d9;">
-        <p><strong>¿Qué es esto?</strong> El Centro de Mando de Pepa 🐷 — tablero Kanban donde Ronald y Pepa coordinan tareas, rutinas y reviews.</p>
-        <p style="margin-top:8px;"><strong>Crear ticket:</strong> Click <span style="color:#58a6ff;">"+ Nueva tarea"</span> arriba del board. Llenar título, asignado, prioridad, descripción, due date.</p>
-        <p style="margin-top:8px;"><strong>Editar ticket:</strong> Usar los botones de acción en cada card (▶ Start, ✅ Done, 👀 Approve). Click en la prioridad para cambiarla. Click en el assignee badge para reasignar. Click en la fecha para cambiar due date.</p>
-        <p style="margin-top:8px;"><strong>Comentarios:</strong> Click "💬 comments" para abrir, escribir feedback y enviar.</p>
-        <p style="margin-top:8px;"><strong>Buscar:</strong> Usar la barra de búsqueda para encontrar en archivos de memoria.</p>
+        <p><strong>What is this?</strong> OCC — OpenClaw Command Center. A Kanban board where humans and agents coordinate tasks, routines, and reviews.</p>
+        <p style="margin-top:8px;"><strong>Create a task:</strong> Click <span style="color:#58a6ff;">"+ New task"</span> above the board. Fill in title, assignee, priority, description, due date.</p>
+        <p style="margin-top:8px;"><strong>Edit a task:</strong> Use the action buttons on each card (▶ Start, ✅ Done, 👀 Approve). Click on the priority to change it. Click on the assignee badge to reassign. Click on the date to change due date.</p>
+        <p style="margin-top:8px;"><strong>Comments:</strong> Click "💬 comments" to open, write feedback and send.</p>
+        <p style="margin-top:8px;"><strong>Search:</strong> Use the search bar to find content in memory files.</p>
       </div>
     </div>
 
     <div id="reglas-content" style="font-size:13px;line-height:1.7;color:#c9d1d9;">
-      <p style="color:#8b949e;">Cargando reglas...</p>
+      <p style="color:#8b949e;">Loading rules...</p>
     </div>
 
   </div>
@@ -314,6 +314,23 @@
 <script>
 const API = '/api';
 
+// Config loaded from server
+let CONFIG = { humanName: 'Human', agentName: 'Agent', defaultAssignee: 'agent', defaultAuthor: 'Human' };
+
+async function loadConfig() {
+  try {
+    CONFIG = await fetch(API + '/config').then(r => r.json());
+  } catch(e) { console.error('Failed to load config', e); }
+
+  // Update dynamic labels
+  document.querySelectorAll('.human-name-label').forEach(el => el.textContent = CONFIG.humanName);
+  document.querySelectorAll('.agent-name-label').forEach(el => el.textContent = CONFIG.agentName);
+
+  // Populate assignee select in new-task form
+  const sel = document.getElementById('f-assignee');
+  sel.innerHTML = `<option value="agent">🤖 ${CONFIG.agentName}</option><option value="human">👤 ${CONFIG.humanName}</option>`;
+}
+
 // Tabs
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -321,7 +338,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-    
+
     // Load analytics when analytics tab is clicked
     if (tab.dataset.tab === 'analytics') {
       loadAnalytics();
@@ -352,15 +369,15 @@ function renderToolsMd(md) {
   // Extract only the inventory section
   const start = md.indexOf('## 🧰 APIs & Skills');
   if (start > -1) md = md.substring(start);
-  
+
   let html = '';
   const lines = md.split('\n');
   let inTable = false;
   let tableHtml = '';
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     // Headers
     if (line.startsWith('### ')) {
       if (inTable) { html += tableHtml + '</table></div>'; inTable = false; tableHtml = ''; }
@@ -373,7 +390,7 @@ function renderToolsMd(md) {
       html += `<h2 style="color:#d29922;font-size:16px;margin:20px 0 12px;">${line.replace('## ','')}</h2>`;
       continue;
     }
-    
+
     // Table rows
     if (line.startsWith('|') && line.includes('|')) {
       const cells = line.split('|').filter(c => c.trim()).map(c => c.trim());
@@ -389,14 +406,14 @@ function renderToolsMd(md) {
       }
       continue;
     }
-    
+
     // End of table
     if (inTable && !line.startsWith('|')) {
       html += tableHtml + '</table></div>';
       inTable = false;
       tableHtml = '';
     }
-    
+
     // Italic note lines
     if (line.startsWith('*') && line.endsWith('*') && !line.startsWith('**')) {
       html += `<p style="color:#8b949e;font-size:11px;margin-top:12px;">${line.replace(/\*/g,'')}</p>`;
@@ -406,7 +423,7 @@ function renderToolsMd(md) {
   return html;
 }
 
-// Load Reglas de Oro from REGLAS-DE-ORO.md
+// Load Golden Rules
 (async function loadReglas() {
   try {
     const res = await fetch(API + '/reglas');
@@ -419,15 +436,15 @@ function renderToolsMd(md) {
 function renderReglasMd(md) {
   let html = '';
   const sections = md.split(/^---$/m);
-  
+
   for (const section of sections) {
     const lines = section.trim().split('\n');
     let sectionHtml = '';
     let inList = false;
     let inCode = false;
-    
+
     for (const line of lines) {
-      if (line.startsWith('```')) { 
+      if (line.startsWith('```')) {
         if (!inCode) { sectionHtml += '<div style="background:#0d1117;padding:10px;border-radius:6px;margin:8px 0;font-family:monospace;font-size:12px;">'; inCode = true; }
         else { sectionHtml += '</div>'; inCode = false; }
         continue;
@@ -460,27 +477,27 @@ async function loadBrain() {
   try {
     const res = await fetch(API + '/brain');
     const files = await res.json();
-    
+
     // Order: core files first, then daily notes newest first
     const order = ['IDENTITY.md', 'SOUL.md', 'USER.md', 'AGENTS.md', 'HEARTBEAT.md', 'MEMORY.md'];
     const dailyKeys = Object.keys(files).filter(k => k.startsWith('memory/')).sort().reverse();
     const allKeys = [...order.filter(k => files[k]), ...dailyKeys];
-    
-    const icons = { 'SOUL.md':'👻', 'IDENTITY.md':'🐷', 'USER.md':'👤', 'MEMORY.md':'🧠', 'AGENTS.md':'📋', 'HEARTBEAT.md':'💓' };
-    
+
+    const icons = { 'SOUL.md':'👻', 'IDENTITY.md':'🤖', 'USER.md':'👤', 'MEMORY.md':'🧠', 'AGENTS.md':'📋', 'HEARTBEAT.md':'💓' };
+
     let html = '';
     for (const key of allKeys) {
       const icon = icons[key] || '📝';
       const label = key.startsWith('memory/') ? '📝 ' + key.replace('memory/','') : icon + ' ' + key;
       const id = 'brain-' + key.replace(/[^a-zA-Z0-9]/g, '-');
       const expanded = (key === 'IDENTITY.md' || key === 'HEARTBEAT.md') ? 'open' : '';
-      
+
       html += `<details ${expanded} style="background:#161b22;border:1px solid #30363d;border-radius:8px;margin-bottom:8px;">`;
       html += `<summary style="padding:12px 16px;cursor:pointer;color:#f0f6fc;font-weight:600;font-size:14px;user-select:none;">${label}</summary>`;
       html += `<div style="padding:4px 16px 16px;border-top:1px solid #30363d;"><pre style="white-space:pre-wrap;word-break:break-word;font-size:12px;color:#c9d1d9;font-family:ui-monospace,monospace;line-height:1.6;margin:0;">${escapeHtml(files[key])}</pre></div>`;
       html += `</details>`;
     }
-    
+
     el.innerHTML = html;
     brainLoaded = true;
   } catch(e) { el.innerHTML = '<p style="color:#f85149;">Error loading brain files</p>'; console.error(e); }
@@ -493,7 +510,7 @@ function escapeHtml(str) {
 function formatDate(d) {
   if (!d) return '';
   const dt = new Date(d.includes('Z') || d.includes('+') || d.includes('-',10) ? d : d + 'Z');
-  return dt.toLocaleDateString('es-PA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function catBadge(cat) {
@@ -516,12 +533,12 @@ function renderCard(task, showActions) {
   const prio = prioMap[task.priority] || prioMap.normal;
   const prioLabel = `<span class="badge" style="background:${prio.bg};color:${prio.color};cursor:pointer;" onclick="cyclePriority(${task.id},'${task.priority}')" title="Tap to change priority">${prio.label}</span>`;
   const statusBadge = `<span class="badge badge-${task.status}">${task.status.toUpperCase()}</span>`;
-  const assigneeIcon = task.assignee === 'ronald' ? '👤' : '🐷';
+  const assigneeIcon = task.assignee === 'human' ? '👤' : '🤖';
 
   let reviewBadge = '';
   if (task.status === 'done') {
-    reviewBadge = task.reviewed_by_ronald 
-      ? '<span class="badge badge-reviewed">✅ Reviewed</span>' 
+    reviewBadge = task.reviewed_by_owner
+      ? '<span class="badge badge-reviewed">✅ Reviewed</span>'
       : '<span class="badge badge-review">⏳ Pending Review</span>';
   }
 
@@ -536,33 +553,33 @@ function renderCard(task, showActions) {
 
   let actions = '';
   if (showActions) {
-    const cancelBtn = `<button style="border-color:#f85149;color:#f85149;" onclick="if(confirm('¿Cancelar #${task.id}?'))updateTask(${task.id},{status:'archived'})">✕</button>`;
+    const cancelBtn = `<button style="border-color:#f85149;color:#f85149;" onclick="if(confirm('Cancel #${task.id}?'))updateTask(${task.id},{status:'archived'})">✕</button>`;
     if (task.status === 'todo') actions = `<button onclick="updateTask(${task.id},{status:'doing'})">▶ Start</button> ${cancelBtn}`;
     else if (task.status === 'doing') actions = `<button onclick="updateTask(${task.id},{status:'todo'})">◀ To Do</button><button onclick="updateTask(${task.id},{status:'done'})">✅ Done</button> ${cancelBtn}`;
-    else if (task.status === 'done' && !task.reviewed_by_ronald) {
-      if (task.assignee === 'ronald') {
-        actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" style="border-color:#bc8cff;color:#bc8cff;" onclick="updateTask(${task.id},{assignee:'pepa'})">🐷 Pepa Review</button> ${cancelBtn}`;
+    else if (task.status === 'done' && !task.reviewed_by_owner) {
+      if (task.assignee === 'human') {
+        actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" style="border-color:#bc8cff;color:#bc8cff;" onclick="updateTask(${task.id},{assignee:'agent'})">🤖 ${CONFIG.agentName} Review</button> ${cancelBtn}`;
       } else {
-        actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_ronald:1})">👀 Approve</button> ${cancelBtn}`;
+        actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_owner:1})">👀 Approve</button> ${cancelBtn}`;
       }
     }
   }
 
   const comments = task.comments || [];
-  const commentsHtml = comments.map(c => 
+  const commentsHtml = comments.map(c =>
     `<div class="comment"><span class="comment-author">${c.author}</span><span class="comment-time">${formatDate(c.timestamp)}</span><div class="comment-text">${c.text}</div></div>`
   ).join('');
 
-  const assigneeLabel = task.assignee === 'ronald' ? '👤 Ronald' : '🐷 Pepa';
-  const toggleAssignee = task.assignee === 'ronald' ? 'pepa' : 'ronald';
-  const assigneeBadge = `<span class="badge" style="background:${task.assignee==='ronald'?'#3d2a0f':'#2a1a2e'};color:${task.assignee==='ronald'?'#f78166':'#bc8cff'};cursor:pointer" onclick="updateTask(${task.id},{assignee:'${toggleAssignee}'})" title="Click para cambiar a ${toggleAssignee}">${assigneeLabel}</span>`;
+  const assigneeLabel = task.assignee === 'human' ? '👤 ' + CONFIG.humanName : '🤖 ' + CONFIG.agentName;
+  const toggleAssignee = task.assignee === 'human' ? 'agent' : 'human';
+  const assigneeBadge = `<span class="badge" style="background:${task.assignee==='human'?'#3d2a0f':'#2a1a2e'};color:${task.assignee==='human'?'#f78166':'#bc8cff'};cursor:pointer" onclick="updateTask(${task.id},{assignee:'${toggleAssignee}'})" title="Click to reassign">${assigneeLabel}</span>`;
 
   const taskId = `#${task.id}`;
   const projectRef = task.project_ref || '';
 
   return `<div class="card ${prioClass}" data-assignee="${task.assignee}">
     <div class="card-title"><span class="task-id" onclick="copyId('${taskId}',this)" title="Tap to copy ${taskId}">${taskId}</span> ${task.title}</div>
-    ${task.parent_id ? `<div style="font-size:11px;margin-bottom:4px;padding:3px 8px;background:rgba(88,166,255,0.1);border-left:2px solid #58a6ff;border-radius:0 4px 4px 0;">↳ subtarea de <span class="task-id" onclick="copyId('#${task.parent_id}',this)" style="font-size:10px">#${task.parent_id}</span></div>` : ''}
+    ${task.parent_id ? `<div style="font-size:11px;margin-bottom:4px;padding:3px 8px;background:rgba(88,166,255,0.1);border-left:2px solid #58a6ff;border-radius:0 4px 4px 0;">↳ subtask of <span class="task-id" onclick="copyId('#${task.parent_id}',this)" style="font-size:10px">#${task.parent_id}</span></div>` : ''}
     ${projectRef ? `<div style="font-size:11px;color:#58a6ff;margin-bottom:4px;">📂 ${projectRef}</div>` : ''}
     ${task.description ? `<div class="card-desc">${task.description}</div>` : ''}
     <div class="card-meta">${assigneeBadge} ${catBadge(task.deliverable_type || task.category || 'other')} ${prioLabel} ${reviewBadge} ${(() => {
@@ -571,8 +588,8 @@ function renderCard(task, showActions) {
       const now = new Date();
       const days = Math.ceil((due - now) / 86400000);
       const color = days < 0 ? '#f85149' : days <= 2 ? '#d29922' : '#58a6ff';
-      const label = days < 0 ? '⚠️ VENCIDA' : days === 0 ? '📅 HOY' : days <= 2 ? '📅 ' + days + 'd' : '📅 ' + task.due_date;
-      return '<span class="badge" style="background:' + (days < 0 ? '#3d1214' : days <= 2 ? '#3d2a0f' : '#0d1d30') + ';color:' + color + ';cursor:pointer" onclick="promptDueDate(' + task.id + ')" title="Click para cambiar due date">' + label + '</span>';
+      const label = days < 0 ? '⚠️ OVERDUE' : days === 0 ? '📅 TODAY' : days <= 2 ? '📅 ' + days + 'd' : '📅 ' + task.due_date;
+      return '<span class="badge" style="background:' + (days < 0 ? '#3d1214' : days <= 2 ? '#3d2a0f' : '#0d1d30') + ';color:' + color + ';cursor:pointer" onclick="promptDueDate(' + task.id + ')" title="Click to change due date">' + label + '</span>';
     })()}</div>
     ${links}
     ${actions ? `<div class="card-actions">${actions}</div>` : ''}
@@ -582,7 +599,7 @@ function renderCard(task, showActions) {
     <div class="comments" style="display:none">
       ${commentsHtml}
       <div class="comment-form">
-        <select id="author-${task.id}"><option value="Ronald">Ronald</option><option value="Pepa">Pepa</option></select>
+        <select id="author-${task.id}"><option value="${CONFIG.humanName}">${CONFIG.humanName}</option><option value="${CONFIG.agentName}">${CONFIG.agentName}</option></select>
         <input type="text" id="comment-${task.id}" placeholder="Write feedback..." onkeyup="if(event.key==='Enter')addComment(${task.id})">
         <button onclick="addComment(${task.id})">Send</button>
       </div>
@@ -596,7 +613,7 @@ function logIcon(type) {
 }
 
 function promptDueDate(id) {
-  const val = prompt('Due date (YYYY-MM-DD) o vacío para quitar:');
+  const val = prompt('Due date (YYYY-MM-DD) or empty to remove:');
   if (val === null) return;
   updateTask(id, { due_date: val || null });
 }
@@ -637,21 +654,21 @@ function setFilter(f) {
 function renderBoard(tasks) {
   const f = currentFilter;
   const filtered = f === 'all' ? tasks : tasks.filter(t => t.assignee === f);
-  
+
   const routineTasks = filtered.filter(t => t.status === 'routine');
   const nonRoutine = filtered.filter(t => t.status !== 'routine');
-  
+
   // "done" tasks split: unreviewed → Review column, reviewed → Closed
-  const reviewTasks = nonRoutine.filter(t => t.status === 'done' && !t.reviewed_by_ronald);
-  const closedTasks = nonRoutine.filter(t => t.status === 'done' && t.reviewed_by_ronald);
-  
+  const reviewTasks = nonRoutine.filter(t => t.status === 'done' && !t.reviewed_by_owner);
+  const closedTasks = nonRoutine.filter(t => t.status === 'done' && t.reviewed_by_owner);
+
   const empty = '<div style="color:#484f58;padding:12px;font-size:12px">—</div>';
   document.getElementById('cards-todo').innerHTML = nonRoutine.filter(t=>t.status==='todo').map(t=>renderCard(t,true)).join('') || empty;
   document.getElementById('cards-doing').innerHTML = nonRoutine.filter(t=>t.status==='doing').map(t=>renderCard(t,true)).join('') || empty;
   document.getElementById('cards-review').innerHTML = reviewTasks.map(t=>renderCard(t,true)).join('') || empty;
   document.getElementById('cards-routine').innerHTML = routineTasks.map(t=>renderCard(t,false)).join('') || empty;
   document.getElementById('routine-count').textContent = `(${routineTasks.length})`;
-  document.getElementById('cards-closed').innerHTML = closedTasks.map(t=>renderCard(t,false)).join('') || '<div style="color:#484f58;padding:12px;font-size:12px">Nada cerrado aún</div>';
+  document.getElementById('cards-closed').innerHTML = closedTasks.map(t=>renderCard(t,false)).join('') || '<div style="color:#484f58;padding:12px;font-size:12px">Nothing closed yet</div>';
   document.getElementById('closed-count').textContent = `(${closedTasks.length})`;
 }
 
@@ -667,7 +684,7 @@ async function loadAnalytics() {
   try {
     const aging = await fetch(API+'/aging').then(r=>r.json());
     const stats = aging.metrics;
-    
+
     // Display aging stats
     document.getElementById('aging-stats').innerHTML = `
       <div class="stat"><div class="num" style="color:#f85149">${stats.stale_tasks}</div><div class="label">Stale Tasks</div></div>
@@ -675,7 +692,7 @@ async function loadAnalytics() {
       <div class="stat"><div class="num" style="color:#3fb950">${stats.avg_completion_hours}h</div><div class="label">Avg Completion</div></div>
       <div class="stat"><div class="num" style="color:#bc8cff">${Math.floor(stats.oldest_active/24)}d</div><div class="label">Oldest Active</div></div>
     `;
-    
+
     // Display stale tasks
     const staleTasksHtml = aging.tasks
       .filter(t => (t.isStale || t.isAncient) && t.status !== 'done')
@@ -693,16 +710,16 @@ async function loadAnalytics() {
           <div class="card-meta">
             <span class="badge badge-${task.status}">${task.status}</span>
             <span class="badge badge-${task.priority}">${task.priority}</span>
-            <span class="badge ${task.assignee === 'ronald' ? 'badge-other' : 'badge-content'}">${task.assignee}</span>
+            <span class="badge ${task.assignee === 'human' ? 'badge-other' : 'badge-content'}">${task.assignee}</span>
             ${task.isAncient ? '<span class="badge badge-security">ANCIENT</span>' : ''}
             ${task.isStale ? '<span class="badge badge-high">STALE</span>' : ''}
           </div>
         </div>
       `).join('');
-    
-    document.getElementById('stale-tasks').innerHTML = staleTasksHtml || 
+
+    document.getElementById('stale-tasks').innerHTML = staleTasksHtml ||
       '<div style="color:#3fb950;padding:12px;font-size:12px">✅ No stale tasks - everything looks healthy!</div>';
-      
+
   } catch (error) {
     console.error('Failed to load analytics:', error);
     document.getElementById('aging-stats').innerHTML = '<div style="color:#f85149;padding:12px;">Failed to load analytics</div>';
@@ -726,7 +743,7 @@ async function load() {
     fetch(API+'/stats').then(r=>r.json()),
     fetch(API+'/activity?limit=50').then(r=>r.json())
   ]);
-  
+
   // Also load analytics if that tab is active or will be loaded later
   if (document.querySelector('.tab[data-tab="analytics"]')) {
     loadAnalytics();
@@ -734,8 +751,8 @@ async function load() {
 
   // Stats
   document.getElementById('stats').innerHTML = `
-    <div class="stat ronald"><div class="num">${stats.ronald_pending||0}</div><div class="label">👤 Ronald</div></div>
-    <div class="stat pepa"><div class="num">${stats.pepa_active||0}</div><div class="label">🐷 Pepa</div></div>
+    <div class="stat human"><div class="num">${stats.human_pending||0}</div><div class="label">👤 ${CONFIG.humanName}</div></div>
+    <div class="stat agent"><div class="num">${stats.agent_active||0}</div><div class="label">🤖 ${CONFIG.agentName}</div></div>
     <div class="stat done"><div class="num">${stats.done}</div><div class="label">Done</div></div>
     <div class="stat review"><div class="num">${stats.pending_review}</div><div class="label">⏳ Review</div></div>
   `;
@@ -756,10 +773,10 @@ async function load() {
   // Activity log
   document.getElementById('activity-log').innerHTML = activity.length
     ? activity.map(a => {
-        const t = new Date(a.timestamp).toLocaleString('es-PA', {timeZone:'America/Panama', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+        const t = new Date(a.timestamp).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
         return `<div style="padding:3px 0;border-bottom:1px solid #21262d;color:#8b949e;">${logIcon(a.type)} <span style="color:#484f58">${t}</span> ${a.message}</div>`;
       }).join('')
-    : '<div style="color:#484f58">No activity yet 💤</div>';
+    : '<div style="color:#484f58">No activity yet</div>';
 }
 
 async function addTask() {
@@ -807,7 +824,7 @@ async function addComment(taskId) {
 
 function updateClock() {
   const now = new Date();
-  document.getElementById('clock').textContent = now.toLocaleString('es-PA', { timeZone:'America/Panama', weekday:'short', hour:'2-digit', minute:'2-digit' });
+  document.getElementById('clock').textContent = now.toLocaleString('en-US', { weekday:'short', hour:'2-digit', minute:'2-digit' });
 }
 
 async function searchMemory() {
@@ -816,7 +833,7 @@ async function searchMemory() {
   if (!q) { div.style.display = 'none'; return; }
   const results = await fetch(API+'/search?q='+encodeURIComponent(q)).then(r=>r.json());
   div.style.display = 'block';
-  div.innerHTML = results.length 
+  div.innerHTML = results.length
     ? results.map(r => `<div style="padding:4px 0;border-bottom:1px solid #21262d;"><span style="color:#58a6ff;font-size:11px;">${r.file}:${r.line}</span><div style="color:#c9d1d9;margin-top:2px;">${r.text}</div></div>`).join('')
     : '<span style="color:#484f58">No results</span>';
 }
@@ -837,16 +854,16 @@ function applyAdvancedFilters() {
   const priority = document.getElementById('filter-priority').value;
   const type = document.getElementById('filter-type').value;
   const status = document.getElementById('filter-status').value;
-  
+
   if (!window._allTasks) return;
-  
+
   let filtered = window._allTasks.filter(task => {
     if (priority && task.priority !== priority) return false;
     if (type && task.deliverable_type !== type) return false;
     if (status && task.status !== status) return false;
     return true;
   });
-  
+
   renderBoard(filtered);
 }
 
@@ -854,13 +871,13 @@ function clearAdvancedFilters() {
   document.getElementById('filter-priority').value = '';
   document.getElementById('filter-type').value = '';
   document.getElementById('filter-status').value = '';
-  
+
   if (window._allTasks) {
     renderBoard(window._allTasks);
   }
 }
 
-load();
+loadConfig().then(() => load());
 setInterval(load, 30000);
 updateClock();
 setInterval(updateClock, 60000);

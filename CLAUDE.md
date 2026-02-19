@@ -20,18 +20,15 @@
 | Nombre | **OCC — OpenClaw Command Center** |
 | Repo | `ronaldmego/openclaw-command-center` |
 
-Cada ticket de Archon DEBE tener su GitHub Issue asociado. El PR que cierra el ticket debe incluir `Closes #N` para auto-cerrar el issue en GitHub.
+Trabajo pendiente: ver [GitHub Issues](https://github.com/ronaldmego/openclaw-command-center/issues) del repo.
+Documentación técnica: ver proyecto en Archon (knowledge base, no task tracker).
 
 ### Workflow para agentes
 
-1. Buscar el proyecto en Archon por nombre exacto: **OCC — OpenClaw Command Center**
-2. Tomar el ticket asignado, moverlo a `doing`
-3. Crear branch, hacer cambios, abrir PR con `Closes #N`
-4. **Dejar comentario en el ticket de Archon** con: resumen de cambios, link al PR, archivos modificados
-5. **Dejar comentario en el GitHub Issue** con el mismo resumen
-6. Mover ticket a `review`
-
-No mover a review sin dejar comentarios.
+1. Revisar **GitHub Issues** del repo para encontrar trabajo pendiente
+2. Crear branch, hacer cambios, abrir PR con `Closes #N`
+3. Dejar comentario en el GitHub Issue con resumen de cambios y archivos modificados
+4. No push directo a main — siempre PR
 
 ---
 
@@ -42,7 +39,7 @@ No mover a review sin dejar comentarios.
 | Puerto Prod | `3401` (Tailscale only) |
 | Bind | Configurable via `OCC_HOST` env var |
 | URL | `http://<host>:3401` |
-| Proceso | PM2: `pepa-dashboard` |
+| Proceso | PM2: `occ` |
 
 ---
 
@@ -157,10 +154,10 @@ pm2 start server.js --name occ
 
 ```bash
 # Restart
-pm2 restart pepa-dashboard
+pm2 restart occ
 
 # Logs
-pm2 logs pepa-dashboard --lines 50
+pm2 logs occ --lines 50
 
 # API test
 curl http://localhost:3401/api/tasks | jq

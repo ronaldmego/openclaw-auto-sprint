@@ -1,12 +1,16 @@
 {
-  "name": "pepa-dashboard",
+  "name": "openclaw-command-center",
   "version": "1.0.0",
-  "description": "Pepa Ops - Task tracking & deliverables dashboard",
+  "description": "Kanban board and API for human-agent task coordination",
   "main": "server.js",
+  "license": "MIT",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2"
+  },
+  "optionalDependencies": {
+    "dotenv": "^16.3.1"
   }
 }
