@@ -42,7 +42,7 @@ No mover a review sin dejar comentarios.
 | Puerto Prod | `3401` (Tailscale only) |
 | Bind | Configurable via `OCC_HOST` env var |
 | URL | `http://<host>:3401` |
-| Proceso | PM2: `pepa-dashboard` |
+| Proceso | PM2: `occ` |
 
 ---
 
@@ -157,10 +157,10 @@ pm2 start server.js --name occ
 
 ```bash
 # Restart
-pm2 restart pepa-dashboard
+pm2 restart occ
 
 # Logs
-pm2 logs pepa-dashboard --lines 50
+pm2 logs occ --lines 50
 
 # API test
 curl http://localhost:3401/api/tasks | jq

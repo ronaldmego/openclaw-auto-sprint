@@ -26,7 +26,7 @@ _Coming soon_
 git clone https://github.com/ronaldmego/openclaw-command-center.git
 cd openclaw-command-center
 
-# Install (only express!)
+# Install (express + optional dotenv)
 npm install
 
 # Configure
@@ -49,7 +49,10 @@ Then open `http://localhost:3401` in your browser.
 | `OCC_HOST` | `127.0.0.1` | Bind address |
 | `OCC_PORT` | `3401` | Server port |
 | `OCC_WORKSPACE` | `~/.openclaw/workspace` | OpenClaw workspace path |
-| `OCC_DATA_DIR` | `./data` | Where tasks and logs are stored |
+| `OCC_HUMAN_NAME` | `Human` | Display name for the human user |
+| `OCC_AGENT_NAME` | `Agent` | Display name for the AI agent |
+| `OCC_DEFAULT_ASSIGNEE` | `agent` | Default assignee for new tasks (`human` or `agent`) |
+| `OCC_DEFAULT_AUTHOR` | `Human` | Default author for comments |
 
 ## API
 
