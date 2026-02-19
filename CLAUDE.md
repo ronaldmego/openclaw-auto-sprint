@@ -22,6 +22,17 @@
 
 Cada ticket de Archon DEBE tener su GitHub Issue asociado. El PR que cierra el ticket debe incluir `Closes #N` para auto-cerrar el issue en GitHub.
 
+### Workflow para agentes
+
+1. Buscar el proyecto en Archon por nombre exacto: **OCC — OpenClaw Command Center**
+2. Tomar el ticket asignado, moverlo a `doing`
+3. Crear branch, hacer cambios, abrir PR con `Closes #N`
+4. **Dejar comentario en el ticket de Archon** con: resumen de cambios, link al PR, archivos modificados
+5. **Dejar comentario en el GitHub Issue** con el mismo resumen
+6. Mover ticket a `review`
+
+No mover a review sin dejar comentarios.
+
 ---
 
 ## Puerto
