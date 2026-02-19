@@ -13,6 +13,17 @@
 
 ---
 
+## Proyecto en Archon
+
+| Campo | Valor |
+|-------|-------|
+| Nombre | **OCC — OpenClaw Command Center** |
+| Repo | `ronaldmego/openclaw-command-center` |
+
+Cada ticket de Archon DEBE tener su GitHub Issue asociado. El PR que cierra el ticket debe incluir `Closes #N` para auto-cerrar el issue en GitHub.
+
+---
+
 ## Puerto
 
 | Item | Valor |
