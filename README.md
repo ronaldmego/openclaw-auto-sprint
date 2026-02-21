@@ -33,6 +33,10 @@ npm install
 cp .env.example .env
 # Edit .env — set your host, port, and OpenClaw workspace path
 
+# [Optional] Set up workspace templates for new users
+cp -r workspace-example/ ~/.openclaw/workspace/
+# This provides starter templates for OCC-GOLDEN-RULES.md, TOOLS.md, and agent identity files
+
 # Run
 node server.js
 
