@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCC Cron Schedule - Weekly Calendar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            color: #fff;
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #4facfe;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .timezone {
+            color: #a0a0a0;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .updated {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .calendar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #16213e;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 2px;
+            margin-bottom: 30px;
+        }
+
+        .day-header, .hour-label, .time-cell {
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 0.85rem;
+            border-radius: 6px;
+        }
+
+        .day-header {
+            background: #4facfe;
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .hour-label {
+            background: #2c3e50;
+            color: #bdc3c7;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .time-cell {
+            background: #2c3454;
+            min-height: 50px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .time-cell:hover {
+            background: #34495e;
+            transform: scale(1.02);
+        }
+
+        .time-cell.night {
+            background: #1e2a3a;
+        }
+
+        .time-cell.night:hover {
+            background: #2c3e50;
+        }
+
+        .time-cell.saturated {
+            background: #c0392b;
+        }
+
+        .time-cell.saturated:hover {
+            background: #e74c3c;
+        }
+
+        .time-cell.idle {
+            background: #27ae60;
+            opacity: 0.7;
+        }
+
+        .time-cell.idle:hover {
+            background: #2ecc71;
+            opacity: 1;
+        }
+
+        .cron-item {
+            background: var(--cron-color);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-align: center;
+            line-height: 1.2;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            margin: 1px;
+            flex: 0 1 auto;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #2c3454;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+
+        .legend-item:hover {
+            background: #34495e;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .legend-text {
+            flex: 1;
+        }
+
+        .legend-name {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .legend-schedule {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 15px 20px;
+            background: #2c3454;
+            border-radius: 10px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4facfe;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            margin-top: 5px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: #000;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+            max-width: 200px;
+        }
+
+        @media (max-width: 768px) {
+            .calendar {
+                grid-template-columns: 60px repeat(7, 1fr);
+                gap: 1px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .day-header, .hour-label, .time-cell {
+                font-size: 0.7rem;
+                padding: 6px 2px;
+            }
+            
+            .cron-item {
+                font-size: 0.6rem;
+                padding: 1px 4px;
+            }
+            
+            .legend {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🕒 OCC Cron Schedule</h1>
+        <div class="timezone">America/Panama (EST)</div>
+        <div class="updated">Last updated: <span id="lastUpdated"></span></div>
+    </div>
+
+    <div class="calendar-container">
+        <div class="stats" id="stats">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+
+        <div class="calendar" id="calendar">
+            <!-- Calendar will be populated by JavaScript -->
+        </div>
+
+        <div class="legend" id="legend">
+            <!-- Legend will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Cron data based on actual openclaw cron list
+        const cronData = [
+            {
+                id: 'b53247d0-e3a8-4994-aa48-408b78752aac',
+                name: '🔍 Daily Intel',
+                shortName: '#43 Intel',
+                schedule: '1:30am daily',
+                color: '#e74c3c',
+                times: [{ hour: 1, minute: 30, days: [0,1,2,3,4,5,6] }]
+            },
+            {
+                id: 'f7870377-2cb0-42cc-91e1-ad0f1c17352e', 
+                name: '🔨 Dev Sprint',
+                shortName: '#57 Dev',
+                schedule: '2:00am daily',
+                color: '#f39c12',
+                times: [{ hour: 2, minute: 0, days: [0,1,2,3,4,5,6] }]
+            },
+            {
+                id: '1b274600-83cf-42fd-94a1-04a4e55314ed',
+                name: '🎯 Task Sprint', 
+                shortName: '#58 Tasks',
+                schedule: '3am, 11am, 7pm daily',
+                color: '#9b59b6',
+                times: [
+                    { hour: 3, minute: 0, days: [0,1,2,3,4,5,6] },
+                    { hour: 11, minute: 0, days: [0,1,2,3,4,5,6] },
+                    { hour: 19, minute: 0, days: [0,1,2,3,4,5,6] }
+                ]
+            },
+            {
+                id: '9f4347c2-0219-4323-8785-4bd05d3004bd',
+                name: '🧹 Weekly Hygiene',
+                shortName: '#48 Hygiene', 
+                schedule: 'Sunday 3am',
+                color: '#2ecc71',
+                times: [{ hour: 3, minute: 0, days: [0] }]
+            },
+            {
+                id: 'c4852711-9c3b-4bb2-9251-a5209bc32b47',
+                name: '☀️ Morning Brief',
+                shortName: '#44 Brief',
+                schedule: '7am daily',
+                color: '#f1c40f',
+                times: [{ hour: 7, minute: 0, days: [0,1,2,3,4,5,6] }]
+            },
+            {
+                id: '991a8f64-239e-4fdf-b463-38a3dbd79e6d',
+                name: '📊 SEO Weekly',
+                shortName: '#49 SEO',
+                schedule: 'Monday 8am', 
+                color: '#3498db',
+                times: [{ hour: 8, minute: 0, days: [1] }]
+            },
+            {
+                id: '781e3bea-3ce4-4c19-b173-6f8cb31d5e4d',
+                name: '📋 Board Audit',
+                shortName: '#47 Audit',
+                schedule: '9pm daily',
+                color: '#e67e22',
+                times: [{ hour: 21, minute: 0, days: [0,1,2,3,4,5,6] }]
+            },
+            {
+                id: 'f37ef1ec-aada-4a5e-baf5-988dddc2501d',
+                name: 'OCC Reviewed Tickets',
+                shortName: '#64 Watchdog',
+                schedule: 'Every 6 hours',
+                color: '#34495e',
+                times: [
+                    { hour: 0, minute: 0, days: [0,1,2,3,4,5,6] },
+                    { hour: 6, minute: 0, days: [0,1,2,3,4,5,6] },
+                    { hour: 12, minute: 0, days: [0,1,2,3,4,5,6] },
+                    { hour: 18, minute: 0, days: [0,1,2,3,4,5,6] }
+                ]
+            }
+        ];
+
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const hours = Array.from({length: 24}, (_, i) => i);
+
+        function createCalendar() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+
+            // Create empty corner cell
+            const corner = document.createElement('div');
+            calendar.appendChild(corner);
+
+            // Create day headers
+            days.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                dayHeader.textContent = day;
+                calendar.appendChild(dayHeader);
+            });
+
+            // Create time grid
+            hours.forEach(hour => {
+                // Hour label
+                const hourLabel = document.createElement('div');
+                hourLabel.className = 'hour-label';
+                hourLabel.textContent = hour === 0 ? '12am' : 
+                                       hour === 12 ? '12pm' :
+                                       hour < 12 ? `${hour}am` : `${hour-12}pm`;
+                calendar.appendChild(hourLabel);
+
+                // Day cells for this hour
+                days.forEach((day, dayIndex) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'time-cell';
+                    
+                    // Add night class for hours 23, 0-6
+                    if (hour >= 23 || hour <= 6) {
+                        cell.classList.add('night');
+                    }
+
+                    // Find crons that run at this hour/day
+                    const cronsAtThisTime = [];
+                    cronData.forEach(cron => {
+                        cron.times.forEach(time => {
+                            if (time.hour === hour && time.days.includes(dayIndex)) {
+                                cronsAtThisTime.push(cron);
+                            }
+                        });
+                    });
+
+                    // Add cron items to cell
+                    cronsAtThisTime.forEach(cron => {
+                        const cronItem = document.createElement('div');
+                        cronItem.className = 'cron-item';
+                        cronItem.style.setProperty('--cron-color', cron.color);
+                        cronItem.textContent = cron.shortName;
+                        cell.appendChild(cronItem);
+                    });
+
+                    // Add saturation/idle classes
+                    if (cronsAtThisTime.length >= 2) {
+                        cell.classList.add('saturated');
+                    } else if (cronsAtThisTime.length === 0) {
+                        cell.classList.add('idle');
+                    }
+
+                    // Add hover tooltips
+                    cell.addEventListener('mouseenter', (e) => showTooltip(e, hour, day, cronsAtThisTime));
+                    cell.addEventListener('mouseleave', hideTooltip);
+
+                    calendar.appendChild(cell);
+                });
+            });
+        }
+
+        function createLegend() {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = '';
+
+            cronData.forEach(cron => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                
+                legendItem.innerHTML = `
+                    <div class="legend-color" style="background-color: ${cron.color}"></div>
+                    <div class="legend-text">
+                        <div class="legend-name">${cron.name}</div>
+                        <div class="legend-schedule">${cron.schedule}</div>
+                    </div>
+                `;
+                
+                legend.appendChild(legendItem);
+            });
+        }
+
+        function createStats() {
+            const stats = document.getElementById('stats');
+            
+            // Count total executions per week
+            let totalExecs = 0;
+            let idleHours = 0;
+            let saturatedHours = 0;
+            
+            for (let hour = 0; hour < 24; hour++) {
+                for (let day = 0; day < 7; day++) {
+                    let cronsAtThisTime = 0;
+                    cronData.forEach(cron => {
+                        cron.times.forEach(time => {
+                            if (time.hour === hour && time.days.includes(day)) {
+                                cronsAtThisTime++;
+                                totalExecs++;
+                            }
+                        });
+                    });
+                    
+                    if (cronsAtThisTime === 0) idleHours++;
+                    if (cronsAtThisTime >= 2) saturatedHours++;
+                }
+            }
+
+            stats.innerHTML = `
+                <div class="stat">
+                    <div class="stat-number">${cronData.length}</div>
+                    <div class="stat-label">Active Crons</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">${totalExecs}</div>
+                    <div class="stat-label">Weekly Executions</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">${idleHours}</div>
+                    <div class="stat-label">Idle Hours</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">${saturatedHours}</div>
+                    <div class="stat-label">Saturated Hours</div>
+                </div>
+            `;
+        }
+
+        function showTooltip(e, hour, day, crons) {
+            const tooltip = document.getElementById('tooltip');
+            const hourStr = hour === 0 ? '12am' : 
+                           hour === 12 ? '12pm' :
+                           hour < 12 ? `${hour}am` : `${hour-12}pm`;
+            
+            let content = `<strong>${day} ${hourStr}</strong><br>`;
+            
+            if (crons.length === 0) {
+                content += '<em>No crons scheduled</em>';
+            } else {
+                content += crons.map(cron => `• ${cron.name}`).join('<br>');
+            }
+            
+            tooltip.innerHTML = content;
+            tooltip.style.opacity = '1';
+            tooltip.style.left = e.pageX + 10 + 'px';
+            tooltip.style.top = e.pageY - 10 + 'px';
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.opacity = '0';
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit',
+                timeZone: 'America/Panama'
+            };
+            document.getElementById('lastUpdated').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        // Initialize calendar
+        document.addEventListener('DOMContentLoaded', () => {
+            createCalendar();
+            createLegend();
+            createStats();
+            updateLastUpdated();
+        });
+    </script>
+</body>
+</html>

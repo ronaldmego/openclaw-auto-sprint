@@ -152,8 +152,10 @@
   <button class="tab active" data-tab="board">📋 Board</button>
   <button class="tab" data-tab="log">📡 Activity</button>
   <button class="tab" data-tab="docs">📖 Docs</button>
+  <button class="tab" data-tab="ideas">💡 Ideas</button>
   <button class="tab" data-tab="tools">🧰 Tools</button>
   <button class="tab" data-tab="brain">🧠 Brain</button>
+  <button class="tab" data-tab="schedule">📅 Schedule</button>
   <button class="tab" data-tab="analytics" style="color:#484f58;font-size:12px;">📊 Analytics</button>
 </div>
 
@@ -251,6 +253,11 @@
   </div>
 </div>
 
+<!-- Tab: Schedule -->
+<div class="tab-content" id="tab-schedule">
+  <iframe src="/calendar.html" style="width:100%;height:calc(100vh - 140px);border:none;border-radius:8px;"></iframe>
+</div>
+
 <!-- Tab: Analytics -->
 <div class="tab-content" id="tab-analytics">
   <div class="section">
@@ -304,6 +311,46 @@
   </div>
 </div>
 
+<!-- Tab: Ideas -->
+<div class="tab-content" id="tab-ideas">
+  <div class="section">
+    <div class="filters-bar">
+      <span class="filter-label">Filters:</span>
+      <select id="filter-idea-status" onchange="applyIdeaFilters()">
+        <option value="">All statuses</option>
+        <option value="idea">💡 Idea</option>
+        <option value="explorando">🔬 Explorando</option>
+        <option value="descartada">❌ Descartada</option>
+        <option value="promovida">🎯 Promovida</option>
+      </select>
+      <input type="text" id="filter-idea-tag" placeholder="Filter by tag" onkeyup="if(event.key==='Enter')applyIdeaFilters()" style="background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 10px; border-radius: 6px; font-size: 12px; margin-left: 8px;">
+      <button class="clear-filters" onclick="clearIdeaFilters()">Clear</button>
+    </div>
+
+    <details style="margin: 0 20px 8px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:4px 12px;">
+      <summary style="cursor:pointer;color:#58a6ff;font-size:14px;font-weight:600;padding:8px 0;">💡 Nueva idea</summary>
+      <div class="add-form" style="margin-top:8px;">
+        <div class="form-row">
+          <input type="text" id="idea-title" placeholder="Título de la idea">
+          <input type="text" id="idea-source" placeholder="Fuente (link, persona, etc.)">
+        </div>
+        <div class="form-row">
+          <textarea id="idea-context" placeholder="Contexto (2-3 líneas explicando la idea)" style="min-height: 60px;"></textarea>
+        </div>
+        <div class="form-row">
+          <input type="text" id="idea-tags" placeholder="Tags (separados por comas: #ads, #mcp, #contenido)">
+          <button class="btn-add" onclick="addIdea()">Crear Idea</button>
+        </div>
+      </div>
+    </details>
+
+    <div class="section-title">💡 Ideas & Inspiración <span class="count" id="ideas-count"></span></div>
+    <div class="cards" id="ideas-container">
+      <!-- Ideas will be loaded here -->
+    </div>
+  </div>
+</div>
+
 <!-- Tab: Tools -->
 <div class="tab-content" id="tab-tools">
   <div class="section" style="max-width:900px;">
@@ -348,6 +395,9 @@ document.querySelectorAll('.tab').forEach(tab => {
     }
     if (tab.dataset.tab === 'brain') {
       loadBrain();
+    }
+    if (tab.dataset.tab === 'ideas') {
+      loadIdeas();
     }
   });
 });
@@ -875,6 +925,210 @@ function clearAdvancedFilters() {
   if (window._allTasks) {
     renderBoard(window._allTasks);
   }
+}
+
+// Ideas functionality
+async function loadIdeas() {
+  try {
+    const status = document.getElementById('filter-idea-status').value;
+    const tag = document.getElementById('filter-idea-tag').value.trim();
+    
+    let url = API + '/ideas';
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (tag) params.append('tag', tag);
+    if (params.toString()) url += '?' + params.toString();
+
+    const ideas = await fetch(url).then(r => r.json());
+    window._allIdeas = ideas;
+
+    const container = document.getElementById('ideas-container');
+    const count = document.getElementById('ideas-count');
+    
+    count.textContent = `(${ideas.length})`;
+    
+    if (ideas.length === 0) {
+      container.innerHTML = '<div style="color:#484f58;padding:12px;font-size:12px">No hay ideas aún. ¡Crea la primera! 💡</div>';
+      return;
+    }
+
+    container.innerHTML = ideas.map(renderIdeaCard).join('');
+  } catch (error) {
+    console.error('Failed to load ideas:', error);
+    document.getElementById('ideas-container').innerHTML = '<div style="color:#f85149;padding:12px;">Error loading ideas</div>';
+  }
+}
+
+function renderIdeaCard(idea) {
+  const statusEmojis = {
+    'idea': '💡',
+    'explorando': '🔬', 
+    'descartada': '❌',
+    'promovida': '🎯'
+  };
+  
+  const statusColors = {
+    'idea': 'color: #d29922',
+    'explorando': 'color: #58a6ff',
+    'descartada': 'color: #f85149',
+    'promovida': 'color: #3fb950'
+  };
+
+  const tagsHtml = (idea.tags || []).map(tag => 
+    `<span style="background:#1a2332;color:#79c0ff;font-size:10px;padding:2px 6px;border-radius:12px;margin-right:4px;">${tag}</span>`
+  ).join('');
+
+  const sourceHtml = idea.source ? 
+    `<div style="font-size:11px;color:#8b949e;margin-top:4px;">
+      📎 <a href="${idea.source}" target="_blank" style="color:#58a6ff;text-decoration:none;">${idea.source}</a>
+    </div>` : '';
+
+  const promoteButton = idea.status !== 'promovida' && idea.status !== 'descartada' ? 
+    `<button onclick="showPromoteDialog(${idea.id})" style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid #3fb950;background:#1f3d2a;color:#3fb950;cursor:pointer;margin-left:8px;">🎯 Promover</button>` : '';
+
+  return `
+    <div class="card" style="margin-bottom:8px;">
+      <div class="card-title">
+        <span class="task-id" onclick="copyText('#${idea.id}')">#${idea.id}</span>
+        ${idea.title || 'Sin título'}
+        <div style="margin-left:auto;display:flex;align-items:center;">
+          <span style="${statusColors[idea.status] || 'color: #8b949e'}">${statusEmojis[idea.status] || '❓'} ${idea.status}</span>
+        </div>
+      </div>
+      ${idea.context ? `<div class="card-desc">${idea.context}</div>` : ''}
+      ${sourceHtml}
+      ${tagsHtml ? `<div style="margin-top:8px;">${tagsHtml}</div>` : ''}
+      ${idea.promoted_to ? `<div style="margin-top:8px;color:#3fb950;font-size:11px;">✅ Promovida a ticket #${idea.promoted_to}</div>` : ''}
+      <div class="card-actions" style="margin-top:8px;">
+        <select onchange="updateIdeaStatus(${idea.id}, this.value)" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #30363d;background:#21262d;color:#c9d1d9;">
+          <option value="idea" ${idea.status === 'idea' ? 'selected' : ''}>💡 Idea</option>
+          <option value="explorando" ${idea.status === 'explorando' ? 'selected' : ''}>🔬 Explorando</option>
+          <option value="descartada" ${idea.status === 'descartada' ? 'selected' : ''}>❌ Descartada</option>
+        </select>
+        ${promoteButton}
+        <button onclick="deleteIdea(${idea.id})" style="font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #f85149;background:transparent;color:#f85149;cursor:pointer;margin-left:8px;">🗑️</button>
+      </div>
+    </div>
+  `;
+}
+
+async function addIdea() {
+  const title = document.getElementById('idea-title').value.trim();
+  const source = document.getElementById('idea-source').value.trim();
+  const context = document.getElementById('idea-context').value.trim();
+  const tagsInput = document.getElementById('idea-tags').value.trim();
+  
+  if (!title) {
+    alert('El título es requerido');
+    return;
+  }
+
+  const tags = tagsInput ? tagsInput.split(',').map(t => t.trim().replace(/^#/, '')) : [];
+
+  try {
+    await fetch(API + '/ideas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        source: source || null,
+        context: context || null,
+        tags,
+        status: 'idea'
+      })
+    });
+
+    // Clear form
+    document.getElementById('idea-title').value = '';
+    document.getElementById('idea-source').value = '';  
+    document.getElementById('idea-context').value = '';
+    document.getElementById('idea-tags').value = '';
+
+    // Reload ideas
+    await loadIdeas();
+  } catch (error) {
+    console.error('Failed to add idea:', error);
+    alert('Error al crear la idea');
+  }
+}
+
+async function updateIdeaStatus(id, newStatus) {
+  try {
+    await fetch(API + '/ideas/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    await loadIdeas();
+  } catch (error) {
+    console.error('Failed to update idea:', error);
+    alert('Error al actualizar la idea');
+  }
+}
+
+async function deleteIdea(id) {
+  if (!confirm('¿Seguro que quieres eliminar esta idea?')) return;
+  
+  try {
+    await fetch(API + '/ideas/' + id, { method: 'DELETE' });
+    await loadIdeas();
+  } catch (error) {
+    console.error('Failed to delete idea:', error);
+    alert('Error al eliminar la idea');
+  }
+}
+
+function showPromoteDialog(id) {
+  const idea = window._allIdeas?.find(i => i.id === id);
+  if (!idea) return;
+
+  const assignee = prompt('¿A quién asignar el ticket?', CONFIG.defaultAssignee);
+  if (!assignee) return;
+
+  const priority = prompt('¿Qué prioridad? (normal/high)', 'normal');
+  if (!priority) return;
+
+  const dueDate = prompt('¿Fecha límite? (YYYY-MM-DD, opcional)', '');
+
+  promoteIdea(id, assignee, priority, dueDate || null);
+}
+
+async function promoteIdea(id, assignee, priority, dueDate) {
+  try {
+    const response = await fetch(API + '/ideas/' + id + '/promote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assignee,
+        priority,
+        due_date: dueDate
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Error promoting idea');
+    }
+
+    const result = await response.json();
+    alert(`¡Idea promovida! 💡➡️🎯 Nuevo ticket: #${result.task.id}`);
+    
+    await loadIdeas();
+    await load(); // Refresh tasks too
+  } catch (error) {
+    console.error('Failed to promote idea:', error);
+    alert('Error al promover la idea: ' + error.message);
+  }
+}
+
+function applyIdeaFilters() {
+  loadIdeas();
+}
+
+function clearIdeaFilters() {
+  document.getElementById('filter-idea-status').value = '';
+  document.getElementById('filter-idea-tag').value = '';
+  loadIdeas();
 }
 
 loadConfig().then(() => load());

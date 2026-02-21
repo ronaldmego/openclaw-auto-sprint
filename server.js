@@ -20,12 +20,16 @@ const LOG_FILE = path.join(__dirname, 'data', 'activity.json');
 function loadDB() {
   try {
     const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    // Fix nextId to always be above max existing id
-    const maxId = data.tasks.reduce((m, t) => Math.max(m, t.id || 0), 0);
+    // Ensure ideas array exists
+    if (!data.ideas) data.ideas = [];
+    // Fix nextId to always be above max existing id (including ideas)
+    const maxTaskId = data.tasks.reduce((m, t) => Math.max(m, t.id || 0), 0);
+    const maxIdeaId = data.ideas.reduce((m, i) => Math.max(m, i.id || 0), 0);
+    const maxId = Math.max(maxTaskId, maxIdeaId);
     if (data.nextId <= maxId) data.nextId = maxId + 1;
     return data;
   }
-  catch { return { tasks: [], nextId: 1 }; }
+  catch { return { tasks: [], ideas: [], nextId: 1 }; }
 }
 
 function loadLogs() {
@@ -203,6 +207,117 @@ app.delete('/api/tasks/:id/comments/:commentId', (req, res) => {
 app.delete('/api/tasks/:id', (req, res) => {
   const db = loadDB();
   db.tasks = db.tasks.filter(t => t.id !== parseInt(req.params.id));
+  saveDB(db);
+  res.json({ ok: true });
+});
+
+// API: Get all ideas
+app.get('/api/ideas', (req, res) => {
+  const db = loadDB();
+  let ideas = db.ideas || [];
+  if (req.query.status) ideas = ideas.filter(i => i.status === req.query.status);
+  if (req.query.tag) ideas = ideas.filter(i => i.tags && i.tags.includes(req.query.tag));
+  // Sort by status priority: 💡 idea > 🔬 explorando > ❌ descartada, then by created date desc
+  const statusOrder = { 'idea': 1, 'explorando': 2, 'descartada': 3 };
+  ideas.sort((a, b) => (statusOrder[a.status]||4) - (statusOrder[b.status]||4) || new Date(b.created_at) - new Date(a.created_at));
+  res.json(ideas);
+});
+
+// API: Create idea
+app.post('/api/ideas', (req, res) => {
+  const db = loadDB();
+  if (!db.ideas) db.ideas = [];
+  const { title, source, context, tags, status } = req.body;
+  const validStatuses = ['idea', 'explorando', 'descartada'];
+  const idea = {
+    id: db.nextId++,
+    title: title || null,
+    source: source || null,
+    context: context || null,
+    tags: Array.isArray(tags) ? tags : (typeof tags === 'string' ? tags.split(',').map(t => t.trim()) : []),
+    status: validStatuses.includes(status) ? status : 'idea',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    promoted_to: null // Will store task ID when promoted
+  };
+  db.ideas.push(idea);
+  saveDB(db);
+  addLog('idea_created', `💡 #${idea.id} ${idea.title}`);
+  res.json(idea);
+});
+
+// API: Update idea
+app.patch('/api/ideas/:id', (req, res) => {
+  const db = loadDB();
+  const id = parseInt(req.params.id);
+  const idea = (db.ideas || []).find(i => i.id === id);
+  if (!idea) return res.status(404).json({ error: 'not found' });
+
+  const allowed = ['title', 'source', 'context', 'tags', 'status'];
+  for (const [key, val] of Object.entries(req.body)) {
+    if (allowed.includes(key)) {
+      if (key === 'tags' && Array.isArray(val)) {
+        idea[key] = val;
+      } else if (key === 'tags' && typeof val === 'string') {
+        idea[key] = val.split(',').map(t => t.trim());
+      } else {
+        idea[key] = val;
+      }
+    }
+  }
+  idea.updated_at = new Date().toISOString();
+  saveDB(db);
+  addLog('idea_updated', `💡 #${idea.id} ${idea.title} [${Object.keys(req.body).join(',')}]`);
+  res.json(idea);
+});
+
+// API: Promote idea to task
+app.post('/api/ideas/:id/promote', (req, res) => {
+  const db = loadDB();
+  const id = parseInt(req.params.id);
+  const idea = (db.ideas || []).find(i => i.id === id);
+  if (!idea) return res.status(404).json({ error: 'idea not found' });
+  if (idea.promoted_to) return res.status(400).json({ error: 'already promoted' });
+
+  // Create task from idea
+  const { assignee, priority, deliverable_type, due_date } = req.body;
+  const task = {
+    id: db.nextId++,
+    title: idea.title,
+    description: `**Idea promoted:** ${idea.context}\n\n**Source:** ${idea.source}\n**Tags:** ${(idea.tags || []).join(', ')}`,
+    deliverable_type: deliverable_type || 'other',
+    deliverable_url: null,
+    status: 'todo',
+    priority: priority || 'normal',
+    assignee: assignee || DEFAULT_ASSIGNEE,
+    drive_link: null,
+    github_link: null,
+    project_ref: null,
+    parent_id: null,
+    due_date: due_date || null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    completed_at: null,
+    reviewed_by_owner: false
+  };
+
+  db.tasks.push(task);
+  
+  // Mark idea as promoted
+  idea.promoted_to = task.id;
+  idea.status = 'promovida';
+  idea.updated_at = new Date().toISOString();
+  
+  saveDB(db);
+  addLog('idea_promoted', `💡➡️🎯 #${idea.id} → #${task.id} ${task.title}`);
+  res.json({ idea, task });
+});
+
+// API: Delete idea
+app.delete('/api/ideas/:id', (req, res) => {
+  const db = loadDB();
+  if (!db.ideas) return res.json({ ok: true });
+  db.ideas = db.ideas.filter(i => i.id !== parseInt(req.params.id));
   saveDB(db);
   res.json({ ok: true });
 });
