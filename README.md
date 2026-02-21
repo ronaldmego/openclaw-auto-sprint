@@ -99,6 +99,32 @@ OCC loads board rules from `OCC-GOLDEN-RULES.md` in your OpenClaw workspace. Edi
 
 This keeps rules as code, versionable, and readable by both humans and agents.
 
+## Tabs Overview
+
+| Tab | Description |
+|-----|-------------|
+| **Board** | Kanban board with TODO → DOING → DONE → COMPLETED flow |
+| **Activity** | Chronological log of agent checkins and routine results |
+| **Docs** | Golden Rules rendered from `OCC-GOLDEN-RULES.md` |
+| **Ideas** | Brainstorm section for ideas and inspiration |
+| **Tools** | Agent's `TOOLS.md` — APIs, credentials, and capabilities |
+| **Brain** | Reads workspace `.md` files (SOUL.md, MEMORY.md, USER.md, IDENTITY.md, etc.) — your agent's personality, memory, and context at a glance |
+| **Schedule** | Weekly calendar heatmap of all cron jobs — spot idle/saturated hours |
+| **Analytics** | Task metrics and completion stats |
+
+### Brain Tab
+
+The Brain tab displays all `.md` files from your OpenClaw workspace (`OCC_WORKSPACE` path). This gives you visibility into:
+
+- **SOUL.md** — Agent personality and rules
+- **MEMORY.md** — Long-term curated memory
+- **USER.md** — Info about the human operator
+- **IDENTITY.md** — Agent identity and role
+- **TOOLS.md** — Available tools and local notes
+- **HEARTBEAT.md** — Heartbeat checklist
+
+These files are read-only in the UI. Edit them directly in the workspace or via your agent.
+
 ## Design Philosophy
 
 - **Zero build step** — No React, no webpack. Vanilla HTML/CSS/JS.
