@@ -41,6 +41,8 @@ function addLog(type, message) {
   logs.unshift({ type, message, timestamp: new Date().toISOString() });
   // Keep last 200 entries
   if (logs.length > 200) logs.length = 200;
+  // Ensure directory exists before writing
+  fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
   fs.writeFileSync(LOG_FILE, JSON.stringify(logs, null, 2));
 }
 function saveDB(db) {
@@ -456,6 +458,29 @@ app.get('/api/logs', (req, res) => {
   } catch { res.json([]); }
 });
 
+// Initialize data directory and files on startup
+function initializeData() {
+  // Ensure data directory exists
+  const dataDir = path.dirname(DB_FILE);
+  const logsDir = path.join(__dirname, 'data', 'logs');
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.mkdirSync(logsDir, { recursive: true });
+  
+  // Initialize empty database if it doesn't exist
+  if (!fs.existsSync(DB_FILE)) {
+    fs.writeFileSync(DB_FILE, JSON.stringify({ tasks: [], ideas: [], nextId: 1 }, null, 2));
+  }
+  
+  // Initialize empty activity log if it doesn't exist
+  if (!fs.existsSync(LOG_FILE)) {
+    fs.writeFileSync(LOG_FILE, JSON.stringify([], null, 2));
+  }
+}
+
+// Initialize on startup
+initializeData();
+
 app.listen(PORT, HOST, () => {
   console.log(`OCC Dashboard running at http://${HOST}:${PORT}`);
+  console.log(`Data directory initialized at: ${path.dirname(DB_FILE)}`);
 });
