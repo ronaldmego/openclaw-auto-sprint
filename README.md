@@ -1,8 +1,8 @@
-# 🐷 OCC — OpenClaw Command Center
+# OCC — OpenClaw Command Center
 
 A lightweight Kanban board and API designed for **human-agent coordination** with [OpenClaw](https://github.com/openclaw/openclaw).
 
-> Your agent needs structure. You need visibility. OCC bridges the gap.
+> Strategic AI coordination through structured task management and autonomous workflow execution.
 
 ## What is OCC?
 
