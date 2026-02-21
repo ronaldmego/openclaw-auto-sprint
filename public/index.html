@@ -610,7 +610,7 @@ function renderCard(task, showActions) {
       if (task.assignee === 'human') {
         actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" style="border-color:#bc8cff;color:#bc8cff;" onclick="updateTask(${task.id},{assignee:'agent'})">🤖 ${CONFIG.agentName} Review</button> ${cancelBtn}`;
       } else {
-        actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_owner:1})">👀 Approve</button> ${cancelBtn}`;
+        actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'close'})">✅ Close</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'expand'})">🔀 Expand</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'need_info'})">❓ Need Info</button> ${cancelBtn}`;
       }
     }
   }

@@ -142,7 +142,8 @@ app.post('/api/tasks', (req, res) => {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     completed_at: null,
-    reviewed_by_owner: false
+    reviewed_by_owner: false,
+    review_action: null
   };
   db.tasks.push(task);
   saveDB(db);
@@ -157,7 +158,7 @@ app.patch('/api/tasks/:id', (req, res) => {
   const task = db.tasks.find(t => t.id === id);
   if (!task) return res.status(404).json({ error: 'not found' });
 
-  const allowed = ['title', 'description', 'deliverable_type', 'deliverable_url', 'status', 'priority', 'reviewed_by_owner', 'assignee', 'drive_link', 'github_link', 'project_ref', 'parent_id', 'due_date', 'blocked_by', 'ticket_type'];
+  const allowed = ['title', 'description', 'deliverable_type', 'deliverable_url', 'status', 'priority', 'reviewed_by_owner', 'assignee', 'drive_link', 'github_link', 'project_ref', 'parent_id', 'due_date', 'blocked_by', 'ticket_type', 'review_action'];
   for (const [key, val] of Object.entries(req.body)) {
     if (allowed.includes(key)) task[key] = val;
   }
@@ -300,7 +301,8 @@ app.post('/api/ideas/:id/promote', (req, res) => {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     completed_at: null,
-    reviewed_by_owner: false
+    reviewed_by_owner: false,
+    review_action: null
   };
 
   db.tasks.push(task);
