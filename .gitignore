@@ -1,3 +1,8 @@
 node_modules/
 data/
 .env
+
+# User data
+data/tasks.json
+data/activity.json
+data/logs/
