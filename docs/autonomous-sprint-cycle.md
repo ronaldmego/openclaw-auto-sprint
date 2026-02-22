@@ -117,10 +117,28 @@ The Autonomous Sprint Cycle is designed so an executive can:
 
 ```
 Technical deliverables (github_link present)  →  Development Sprint only
-Business deliverables (non-technical)        →  Operations Sprint only
+Business deliverables (non-technical, light)  →  Operations Sprint only
+Heavy deliverables (content, draft, strategy) →  Direct session only (cron skips)
 Executive-reviewed items                      →  Integration Manager only
 Active project comments from executive       →  Board Audit + executing Sprint
 ```
+
+### Ticket Weight Classification
+
+Every ticket has a `deliverable_type` that determines routing:
+
+| Type | Weight | Handled By | Examples |
+|------|--------|------------|----------|
+| `research` | Light | Operations Sprint | Audits, evaluations, analysis |
+| `code` / `pr` / `feature` | Light | Development Sprint | PRs, features, fixes |
+| `config` / `ops` | Light | Operations Sprint | Setup, configuration |
+| `report` | Light | Operations Sprint | Automated reports |
+| `content` | **Heavy** | Direct session only | Blog posts, long-form content |
+| `draft` | **Heavy** | Direct session only | Long drafts for review |
+| `strategy` | **Heavy** | Direct session only | Roadmaps, planning |
+| `routine` | N/A | Cron routines | Recurring system tasks |
+
+**Heavy tickets require direct executive-AI collaboration.** Autonomous routines skip them and report them as "skipped — direct session only."
 
 ---
 
@@ -140,19 +158,19 @@ When reviewing completed deliverables:
 
 ## Information Architecture
 
-1. **Dual-channel delivery:** All deliverables accessible both technically and via executive dashboard
+1. **Dual-channel delivery:** All deliverables accessible both technically and via executive interface
 2. **Mobile-first design:** Assume executive access primarily through mobile devices
-3. **Cloud storage structure:**
+3. **Primary delivery: Notion** (rich content, navigable, mobile-friendly)
    ```
-   Executive Dashboard/
-   ├── ☀️ Daily Briefs/
-   ├── 🔍 Intelligence Reports/
-   ├── 📈 Strategic Analysis/
-   ├── 📊 Performance Metrics/
-   ├── 📝 Content Pipeline/
-   ├── 📋 Project Backlog/
-   └── 📺 Market Research/
+   Executive Workspace (Notion)/
+   ├── 📊 Reports/           ← Intelligence reports, analysis
+   ├── 📋 Daily Briefing/    ← Daily executive summaries
+   ├── 💡 Ideas & Research/  ← Findings, explorations
+   └── 📝 Drafts/            ← Content drafts for review
    ```
+4. **Secondary delivery: Google Drive** — Only for slides, spreadsheets, binary files, or sharing with third parties
+5. **Technical backup:** Workspace filesystem (source of truth for code/configs)
+6. **Ticket linking:** Every completed ticket must have a `doc_link` pointing to Notion or Drive
 
 ---
 
