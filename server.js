@@ -534,6 +534,25 @@ app.get('/api/logs', (req, res) => {
   } catch { res.json([]); }
 });
 
+// API: Get crons from OpenClaw Gateway
+app.get('/api/crons', (req, res) => {
+  const { exec } = require('child_process');
+  exec('openclaw cron list --json', (error, stdout, stderr) => {
+    if (error) {
+      console.error('Error fetching crons:', error);
+      res.status(500).json({ error: 'Failed to fetch cron jobs', details: error.message });
+      return;
+    }
+    try {
+      const cronData = JSON.parse(stdout);
+      res.json(cronData);
+    } catch (parseError) {
+      console.error('Error parsing cron JSON:', parseError);
+      res.status(500).json({ error: 'Failed to parse cron data', details: parseError.message });
+    }
+  });
+});
+
 // Initialize data directory and files on startup
 function initializeData() {
   // Ensure data directory exists

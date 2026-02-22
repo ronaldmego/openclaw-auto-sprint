@@ -272,85 +272,216 @@
     <div class="tooltip" id="tooltip"></div>
 
     <script>
-        // Cron data based on actual openclaw cron list
-        const cronData = [
-            {
-                id: 'b53247d0-e3a8-4994-aa48-408b78752aac',
-                name: '🔍 Daily Intel',
-                shortName: '#43 Intel',
-                schedule: '1:30am daily',
-                color: '#e74c3c',
-                times: [{ hour: 1, minute: 30, days: [0,1,2,3,4,5,6] }]
-            },
-            {
-                id: 'f7870377-2cb0-42cc-91e1-ad0f1c17352e', 
-                name: '🔨 Dev Sprint',
-                shortName: '#57 Dev',
-                schedule: '2:00am daily',
-                color: '#f39c12',
-                times: [{ hour: 2, minute: 0, days: [0,1,2,3,4,5,6] }]
-            },
-            {
-                id: '1b274600-83cf-42fd-94a1-04a4e55314ed',
-                name: '🎯 Task Sprint', 
-                shortName: '#58 Tasks',
-                schedule: '3am, 11am, 7pm daily',
-                color: '#9b59b6',
-                times: [
-                    { hour: 3, minute: 0, days: [0,1,2,3,4,5,6] },
-                    { hour: 11, minute: 0, days: [0,1,2,3,4,5,6] },
-                    { hour: 19, minute: 0, days: [0,1,2,3,4,5,6] }
-                ]
-            },
-            {
-                id: '9f4347c2-0219-4323-8785-4bd05d3004bd',
-                name: '🧹 Weekly Hygiene',
-                shortName: '#48 Hygiene', 
-                schedule: 'Sunday 3am',
-                color: '#2ecc71',
-                times: [{ hour: 3, minute: 0, days: [0] }]
-            },
-            {
-                id: 'c4852711-9c3b-4bb2-9251-a5209bc32b47',
-                name: '☀️ Morning Brief',
-                shortName: '#44 Brief',
-                schedule: '7am daily',
-                color: '#f1c40f',
-                times: [{ hour: 7, minute: 0, days: [0,1,2,3,4,5,6] }]
-            },
-            {
-                id: '991a8f64-239e-4fdf-b463-38a3dbd79e6d',
-                name: '📊 SEO Weekly',
-                shortName: '#49 SEO',
-                schedule: 'Monday 8am', 
-                color: '#3498db',
-                times: [{ hour: 8, minute: 0, days: [1] }]
-            },
-            {
-                id: '781e3bea-3ce4-4c19-b173-6f8cb31d5e4d',
-                name: '📋 Board Audit',
-                shortName: '#47 Audit',
-                schedule: '9pm daily',
-                color: '#e67e22',
-                times: [{ hour: 21, minute: 0, days: [0,1,2,3,4,5,6] }]
-            },
-            {
-                id: 'f37ef1ec-aada-4a5e-baf5-988dddc2501d',
-                name: 'OCC Reviewed Tickets',
-                shortName: '#64 Watchdog',
-                schedule: 'Every 6 hours',
-                color: '#34495e',
-                times: [
+        let cronData = [];
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const hours = Array.from({length: 24}, (_, i) => i);
+
+        // Color palette for crons
+        const cronColors = [
+            '#e74c3c', '#f39c12', '#9b59b6', '#2ecc71', '#f1c40f', 
+            '#3498db', '#e67e22', '#34495e', '#e91e63', '#ff5722',
+            '#607d8b', '#795548', '#009688', '#8bc34a', '#ffc107'
+        ];
+
+        // Extract shortName from cron name (remove long descriptive text)
+        function extractShortName(name) {
+            // Try to extract ticket number first
+            const ticketMatch = name.match(/#(\d+)/);
+            if (ticketMatch) {
+                // Get the emoji and first few words before the #
+                const beforeTicket = name.split(' — ')[0] || name.split('#')[0];
+                const emoji = beforeTicket.match(/[^\w\s]/)?.[0] || '';
+                const shortText = beforeTicket.replace(/[^\w\s]/g, '').trim().split(' ').slice(0, 2).join(' ');
+                return `${emoji}#${ticketMatch[1]} ${shortText}`.trim();
+            }
+            
+            // Fallback: first emoji + first 1-2 words
+            const emoji = name.match(/[^\w\s]/)?.[0] || '';
+            const words = name.replace(/[^\w\s]/g, '').trim().split(' ').slice(0, 2);
+            return `${emoji} ${words.join(' ')}`.trim();
+        }
+
+        // Parse cron expression into schedule times
+        function parseCronExpression(expr) {
+            const parts = expr.split(' ');
+            if (parts.length !== 5) return [];
+            
+            const [minute, hour, day, month, dayOfWeek] = parts;
+            const times = [];
+            
+            // Parse minutes
+            const minutes = minute === '*' ? [0] : 
+                           minute.includes(',') ? minute.split(',').map(Number) : [Number(minute)];
+            
+            // Parse hours
+            const hours = hour === '*' ? Array.from({length: 24}, (_, i) => i) :
+                         hour.includes(',') ? hour.split(',').map(Number) : [Number(hour)];
+            
+            // Parse days of week (0 = Sunday, 1 = Monday, etc.)
+            let daysOfWeek = [];
+            if (dayOfWeek === '*') {
+                daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
+            } else if (dayOfWeek.includes(',')) {
+                daysOfWeek = dayOfWeek.split(',').map(Number);
+            } else {
+                daysOfWeek = [Number(dayOfWeek)];
+            }
+            
+            // Generate all combinations
+            for (const h of hours) {
+                for (const m of minutes) {
+                    times.push({ hour: h, minute: m, days: daysOfWeek });
+                }
+            }
+            
+            return times;
+        }
+
+        // Parse "every" schedule into times
+        function parseEverySchedule(everyMs, anchorMs) {
+            const times = [];
+            const intervalHours = everyMs / (1000 * 60 * 60);
+            
+            // Calculate anchor hour
+            const anchorDate = new Date(anchorMs);
+            const anchorHour = anchorDate.getHours();
+            
+            // Generate times based on interval
+            if (intervalHours === 6) {
+                // Every 6 hours: 0, 6, 12, 18
+                times.push(
                     { hour: 0, minute: 0, days: [0,1,2,3,4,5,6] },
                     { hour: 6, minute: 0, days: [0,1,2,3,4,5,6] },
                     { hour: 12, minute: 0, days: [0,1,2,3,4,5,6] },
                     { hour: 18, minute: 0, days: [0,1,2,3,4,5,6] }
-                ]
+                );
+            } else if (intervalHours === 24) {
+                // Daily at anchor hour
+                times.push({ hour: anchorHour, minute: anchorDate.getMinutes(), days: [0,1,2,3,4,5,6] });
+            } else if (intervalHours > 24) {
+                // Weekly or less frequent - show at anchor time on anchor day
+                const anchorDay = anchorDate.getDay();
+                times.push({ hour: anchorHour, minute: anchorDate.getMinutes(), days: [anchorDay] });
+            } else {
+                // Multiple times per day
+                const timesPerDay = Math.floor(24 / intervalHours);
+                for (let i = 0; i < timesPerDay; i++) {
+                    const hour = (anchorHour + i * intervalHours) % 24;
+                    times.push({ hour: hour, minute: anchorDate.getMinutes(), days: [0,1,2,3,4,5,6] });
+                }
             }
-        ];
+            
+            return times;
+        }
 
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const hours = Array.from({length: 24}, (_, i) => i);
+        // Generate human-readable schedule description
+        function generateScheduleDescription(schedule, times) {
+            if (schedule.kind === 'cron') {
+                // For cron expressions, generate description from parsed times
+                if (times.length === 1) {
+                    const time = times[0];
+                    const timeStr = time.hour === 0 ? '12am' : 
+                                   time.hour === 12 ? '12pm' :
+                                   time.hour < 12 ? `${time.hour}${time.minute ? ':'+String(time.minute).padStart(2,'0') : ''}am` : 
+                                   `${time.hour-12}${time.minute ? ':'+String(time.minute).padStart(2,'0') : ''}pm`;
+                    
+                    if (time.days.length === 7) {
+                        return `${timeStr} daily`;
+                    } else if (time.days.length === 1) {
+                        return `${days[time.days[0]]} ${timeStr}`;
+                    } else {
+                        const dayNames = time.days.map(d => days[d]).join(', ');
+                        return `${dayNames} ${timeStr}`;
+                    }
+                } else if (times.length > 1) {
+                    // Multiple times - check if they're all the same days
+                    const firstDays = times[0].days;
+                    const sameDays = times.every(t => t.days.length === firstDays.length && 
+                                                     t.days.every(d => firstDays.includes(d)));
+                    
+                    if (sameDays && firstDays.length === 7) {
+                        const timeStrs = times.map(t => {
+                            const h = t.hour === 0 ? '12am' : 
+                                     t.hour === 12 ? '12pm' :
+                                     t.hour < 12 ? `${t.hour}${t.minute ? ':'+String(t.minute).padStart(2,'0') : ''}am` : 
+                                     `${t.hour-12}${t.minute ? ':'+String(t.minute).padStart(2,'0') : ''}pm`;
+                            return h;
+                        }).join(', ');
+                        return `${timeStrs} daily`;
+                    }
+                }
+                return schedule.expr; // Fallback to raw cron expression
+            } else if (schedule.kind === 'every') {
+                const hours = schedule.everyMs / (1000 * 60 * 60);
+                if (hours < 1) {
+                    const minutes = schedule.everyMs / (1000 * 60);
+                    return `Every ${minutes} minutes`;
+                } else if (hours < 24) {
+                    return `Every ${hours} hours`;
+                } else {
+                    const days = hours / 24;
+                    return days === 7 ? 'Weekly' : `Every ${days} days`;
+                }
+            }
+            return 'Unknown schedule';
+        }
+
+        // Fetch cron data from API
+        async function fetchCronData() {
+            try {
+                const response = await fetch('/api/crons');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (!data.jobs || !Array.isArray(data.jobs)) {
+                    throw new Error('Invalid cron data format');
+                }
+
+                // Process the cron data
+                cronData = data.jobs.filter(job => job.enabled).map((job, index) => {
+                    let times = [];
+                    
+                    if (job.schedule.kind === 'cron') {
+                        times = parseCronExpression(job.schedule.expr);
+                    } else if (job.schedule.kind === 'every') {
+                        times = parseEverySchedule(job.schedule.everyMs, job.schedule.anchorMs);
+                    }
+                    
+                    return {
+                        id: job.id,
+                        name: job.name,
+                        shortName: extractShortName(job.name),
+                        schedule: generateScheduleDescription(job.schedule, times),
+                        color: cronColors[index % cronColors.length],
+                        times: times,
+                        enabled: job.enabled,
+                        lastRun: job.state?.lastRunAtMs,
+                        nextRun: job.state?.nextRunAtMs,
+                        lastStatus: job.state?.lastStatus
+                    };
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('Error fetching cron data:', error);
+                showError(`Failed to load cron jobs: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #e74c3c;">
+                    <h3>⚠️ Error Loading Cron Schedule</h3>
+                    <p>${message}</p>
+                    <p>Using offline fallback data would go here...</p>
+                </div>
+            `;
+        }
 
         function createCalendar() {
             const calendar = document.getElementById('calendar');
@@ -527,11 +658,17 @@
         }
 
         // Initialize calendar
-        document.addEventListener('DOMContentLoaded', () => {
-            createCalendar();
-            createLegend();
-            createStats();
-            updateLastUpdated();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Show loading state
+            document.getElementById('calendar').innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px;">Loading cron schedule...</div>';
+            
+            const success = await fetchCronData();
+            if (success && cronData.length > 0) {
+                createCalendar();
+                createLegend();
+                createStats();
+                updateLastUpdated();
+            }
         });
     </script>
 </body>
