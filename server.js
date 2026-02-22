@@ -112,7 +112,7 @@ app.get('/api/brain', (req, res) => {
 // API: Get all tasks
 app.get('/api/tasks', (req, res) => {
   const db = loadDB();
-  let tasks = db.tasks.filter(t => t.status !== 'archived');
+  let tasks = req.query.include_all === 'true' ? db.tasks : db.tasks.filter(t => t.status !== 'archived');
   if (req.query.status) tasks = tasks.filter(t => t.status === req.query.status);
   // Sort: doing first, then todo, then done
   const order = { doing: 1, todo: 2, done: 3 };

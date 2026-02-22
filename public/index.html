@@ -98,7 +98,7 @@
   .filters-bar .filter-label { font-size: 12px; color: #8b949e; font-weight: 600; }
   .filters-bar .clear-filters { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
   .filters-bar .clear-filters:hover { color: #f85149; border-color: #f85149; }
-  #search-results { margin: 0 20px 12px; display: none; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; max-height: 250px; overflow-y: auto; font-size: 12px; }
+  #search-results { margin: 0 20px 12px; display: none; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; max-height: 500px; overflow-y: auto; font-size: 12px; }
 
   /* Add form */
   .add-form { margin: 0 20px 12px; }
@@ -167,7 +167,7 @@
     <button class="filter-btn" id="filter-agent" onclick="setFilter('agent')">🤖 <span class="agent-name-label">Agent</span></button>
   </div>
   <div class="search-bar">
-    <input type="text" id="search-input" placeholder="🔍 Search memory..." onkeyup="if(event.key==='Enter')searchMemory()">
+    <input type="text" id="search-input" placeholder="🔍 Search by #ID, title, or memory..." onkeyup="if(event.key==='Enter')searchMemory()">
     <button onclick="searchMemory()">Search</button>
   </div>
   <div id="search-results"></div>
@@ -881,11 +881,48 @@ async function searchMemory() {
   const q = document.getElementById('search-input').value.trim();
   const div = document.getElementById('search-results');
   if (!q) { div.style.display = 'none'; return; }
-  const results = await fetch(API+'/search?q='+encodeURIComponent(q)).then(r=>r.json());
+
+  // Search by task ID (e.g. #93, 93)
+  const idMatch = q.match(/^#?(\d+)$/);
+  if (idMatch) {
+    const taskId = parseInt(idMatch[1]);
+    const allTasks = await fetch(API+'/tasks?include_all=true').then(r=>r.json());
+    const found = allTasks.filter(t => t.id === taskId);
+    div.style.display = 'block';
+    if (found.length) {
+      div.innerHTML = found.map(t => renderCard(t, t.status !== 'archived')).join('');
+    } else {
+      div.innerHTML = '<span style="color:#484f58">No task found with ID #' + taskId + '</span>';
+    }
+    return;
+  }
+
+  // Text search across all tasks
+  const allTasks = await fetch(API+'/tasks?include_all=true').then(r=>r.json());
+  const lower = q.toLowerCase();
+  const taskResults = allTasks.filter(t =>
+    (t.title && t.title.toLowerCase().includes(lower)) ||
+    (t.description && t.description.toLowerCase().includes(lower)) ||
+    (t.project_ref && t.project_ref.toLowerCase().includes(lower))
+  );
+
+  // Also search memory files
+  const memResults = await fetch(API+'/search?q='+encodeURIComponent(q)).then(r=>r.json());
+
   div.style.display = 'block';
-  div.innerHTML = results.length
-    ? results.map(r => `<div style="padding:4px 0;border-bottom:1px solid #21262d;"><span style="color:#58a6ff;font-size:11px;">${r.file}:${r.line}</span><div style="color:#c9d1d9;margin-top:2px;">${r.text}</div></div>`).join('')
-    : '<span style="color:#484f58">No results</span>';
+  let html = '';
+  if (taskResults.length) {
+    html += `<div style="color:#d29922;font-size:12px;font-weight:600;margin-bottom:8px;">🎯 Tasks (${taskResults.length})</div>`;
+    html += taskResults.map(t => renderCard(t, false)).join('');
+  }
+  if (memResults.length) {
+    html += `<div style="color:#58a6ff;font-size:12px;font-weight:600;margin:12px 0 8px;">📝 Memory (${memResults.length})</div>`;
+    html += memResults.map(r => `<div style="padding:4px 0;border-bottom:1px solid #21262d;"><span style="color:#58a6ff;font-size:11px;">${r.file}:${r.line}</span><div style="color:#c9d1d9;margin-top:2px;">${r.text}</div></div>`).join('');
+  }
+  if (!taskResults.length && !memResults.length) {
+    html = '<span style="color:#484f58">No results</span>';
+  }
+  div.innerHTML = html;
 }
 
 async function updatePulse() {
