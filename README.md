@@ -1,30 +1,51 @@
-# OCC — OpenClaw Command Center
+# OpenClaw Auto Sprint
 
-A lightweight Kanban board and API designed for **human-agent coordination** with [OpenClaw](https://github.com/openclaw/openclaw).
+A lightweight **autonomous task board + sprint engine** for [OpenClaw](https://github.com/openclaw/openclaw) agents. Your agent picks up tasks, executes sprints, delivers results, and requests human review — all through a mobile-first Kanban UI.
 
-> Strategic AI coordination through structured task management and autonomous workflow execution.
+> From manual task management to autonomous sprint cycles. Human sets direction, agent executes.
 
-## What is OCC?
+## What is Auto Sprint?
 
-OCC is the **Single Source of Truth** for managing tasks between you and your AI agent. It provides:
+Auto Sprint turns your OpenClaw agent into an **autonomous executor** with human oversight:
 
-- **Kanban Board** — TODO → DOING → DONE → COMPLETED flow with assignees and reviews
-- **Golden Rules** — Board rules loaded from markdown, not hardcoded
-- **Activity Log** — Every checkin from agent routines in one place
+- **Kanban Board** — TODO → DOING → DONE → REVIEW → COMPLETED flow
+- **Sprint Engine** — Agent picks tasks, executes, and delivers without prompting
+- **Review Workflow** — Human approves, expands, or requests info with one tap
+- **Golden Rules** — Board rules loaded from markdown, enforced by agent routines
+- **Activity Log** — Every checkin from agent sprints in one place
 - **Brain View** — Read your agent's workspace files (SOUL.md, MEMORY.md, etc.)
 - **Tools View** — See your agent's available tools and APIs
-- **Analytics** — Task metrics and completion stats
+- **Ideas Board** — Capture inspiration, promote to tickets when ready
+- **Analytics** — Task metrics, aging, and completion stats
 
 ## Screenshots
 
 _Coming soon_
 
+## The Sprint Cycle
+
+```
+Human creates ticket → Agent picks it up (Task Sprint cron)
+→ Agent executes → Agent marks DONE → Human reviews on phone
+→ Approve ✅ / Expand 🔀 / Need Info ❓
+→ Agent processes review decision (OCC Watchdog cron)
+```
+
+**Cron-powered routines:**
+| Routine | Schedule | What it does |
+|---------|----------|--------------|
+| **Task Sprint** | 3x/day | Picks TODO/DOING tickets, executes, delivers |
+| **Dev Sprint** | Daily 2am | Works on GitHub Issues, creates PRs |
+| **Board Audit** | 2x/day | Enforces rules, processes comments, detects stale tickets |
+| **OCC Watchdog** | Every 6h | Processes review decisions (approve/expand/need-info) |
+| **Morning Brief** | Daily 7am | Summary of overnight work + today's priorities |
+
 ## Quick Start
 
 ```bash
 # Clone
-git clone https://github.com/ronaldmego/openclaw-command-center.git
-cd openclaw-command-center
+git clone https://github.com/ronaldmego/openclaw-auto-sprint.git
+cd openclaw-auto-sprint
 
 # Install (express + optional dotenv)
 npm install
@@ -70,15 +91,19 @@ All endpoints return JSON.
 | `DELETE` | `/api/tasks/:id` | Delete a task |
 | `GET` | `/api/checkins` | List activity log |
 | `POST` | `/api/checkin` | Log a checkin |
+| `GET` | `/api/ideas` | List ideas |
+| `POST` | `/api/ideas` | Create an idea |
+| `POST` | `/api/ideas/:id/promote` | Promote idea to task |
 | `GET` | `/api/reglas` | Get Golden Rules (markdown) |
 | `GET` | `/api/tools` | Get TOOLS.md content |
 | `GET` | `/api/brain` | Get workspace .md files |
-| `GET` | `/api/search?q=` | Full-text search |
+| `GET` | `/api/search?q=` | Full-text search (tasks + memory) |
 | `GET` | `/api/analytics` | Task metrics |
+| `GET` | `/api/aging` | Stale task detection |
 
 ### Agent Integration
 
-Your OpenClaw agent can interact with OCC via simple HTTP calls:
+Your OpenClaw agent can interact with Auto Sprint via simple HTTP calls:
 
 ```bash
 # Create a task
@@ -86,10 +111,10 @@ curl -X POST http://localhost:3401/api/tasks \
   -H "Content-Type: application/json" \
   -d '{"title":"Review PR #5","assignee":"human","priority":"high","status":"todo","due_date":"2026-02-20"}'
 
-# Log a routine checkin
+# Log a sprint checkin
 curl -X POST http://localhost:3401/api/checkin \
   -H "Content-Type: application/json" \
-  -d '{"source":"morning-brief","summary":"All systems green","details":"..."}'
+  -d '{"source":"task-sprint","summary":"Completed #42","details":"..."}'
 
 # Update task status
 curl -X PATCH http://localhost:3401/api/tasks/1 \
@@ -97,9 +122,19 @@ curl -X PATCH http://localhost:3401/api/tasks/1 \
   -d '{"status":"done","assignee":"human"}'
 ```
 
+## Mobile-First Design
+
+Auto Sprint is built for **CEOs who manage from their phone**:
+
+- **Collapsible sections** — Tap to expand/collapse board sections, persisted in localStorage
+- **Large touch targets** — Review buttons sized for thumbs, not mice
+- **Search by #ID** — Find any ticket instantly, including archived
+- **Drive link warnings** — Visual indicator when deliverables are missing
+- **Review actions** — Clear "Your review:" label with Approve/Expand/Need Info buttons
+
 ## Golden Rules
 
-OCC loads board rules from `OCC-GOLDEN-RULES.md` in your OpenClaw workspace. Edit the markdown to change the rules — the dashboard renders them automatically.
+Auto Sprint loads board rules from `OCC-GOLDEN-RULES.md` in your OpenClaw workspace. Edit the markdown to change the rules — the dashboard renders them automatically.
 
 This keeps rules as code, versionable, and readable by both humans and agents.
 
@@ -107,27 +142,14 @@ This keeps rules as code, versionable, and readable by both humans and agents.
 
 | Tab | Description |
 |-----|-------------|
-| **Board** | Kanban board with TODO → DOING → DONE → COMPLETED flow |
-| **Activity** | Chronological log of agent checkins and routine results |
+| **Board** | Kanban board with collapsible sections and review workflow |
+| **Activity** | Chronological log of agent checkins and sprint results |
 | **Docs** | Golden Rules rendered from `OCC-GOLDEN-RULES.md` |
-| **Ideas** | Brainstorm section for ideas and inspiration |
+| **Ideas** | Brainstorm section — capture, explore, promote to tickets |
 | **Tools** | Agent's `TOOLS.md` — APIs, credentials, and capabilities |
-| **Brain** | Reads workspace `.md` files (SOUL.md, MEMORY.md, USER.md, IDENTITY.md, etc.) — your agent's personality, memory, and context at a glance |
-| **Schedule** | Weekly calendar heatmap of all cron jobs — spot idle/saturated hours |
-| **Analytics** | Task metrics and completion stats |
-
-### Brain Tab
-
-The Brain tab displays all `.md` files from your OpenClaw workspace (`OCC_WORKSPACE` path). This gives you visibility into:
-
-- **SOUL.md** — Agent personality and rules
-- **MEMORY.md** — Long-term curated memory
-- **USER.md** — Info about the human operator
-- **IDENTITY.md** — Agent identity and role
-- **TOOLS.md** — Available tools and local notes
-- **HEARTBEAT.md** — Heartbeat checklist
-
-These files are read-only in the UI. Edit them directly in the workspace or via your agent.
+| **Brain** | Agent's workspace `.md` files — personality, memory, context |
+| **Schedule** | Weekly calendar heatmap of all cron jobs |
+| **Analytics** | Task metrics, aging, stale task detection |
 
 ## Design Philosophy
 
@@ -136,15 +158,16 @@ These files are read-only in the UI. Edit them directly in the workspace or via 
 - **JSON storage** — No database. Copy the folder = copy the state.
 - **Workspace-driven** — Rules, tools, and brain come from your OpenClaw workspace files.
 - **Agent-first API** — Every UI action has an API equivalent.
+- **Mobile-first UI** — Designed for phone-first management.
 
 ## For OpenClaw Users
 
-OCC is designed to work with [OpenClaw](https://github.com/openclaw/openclaw) agents. Set up your agent's cron jobs to:
+Auto Sprint is designed to work with [OpenClaw](https://github.com/openclaw/openclaw) agents. Set up your agent's cron jobs to:
 
-1. **Check in** after each routine (POST `/api/checkin`)
-2. **Pick tasks** from the board (GET `/api/tasks`)
-3. **Update status** as work progresses (PATCH `/api/tasks/:id`)
-4. **Audit the board** periodically to enforce Golden Rules
+1. **Sprint** — Pick and execute tasks autonomously (Task Sprint + Dev Sprint)
+2. **Audit** — Enforce Golden Rules and process review decisions
+3. **Report** — Morning briefs, SEO reports, intel digests
+4. **Check in** — Log every action for full transparency
 
 See the [Golden Rules template](OCC-GOLDEN-RULES.example.md) for a starting point.
 
