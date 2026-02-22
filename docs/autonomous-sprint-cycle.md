@@ -22,7 +22,7 @@ The Autonomous Sprint Cycle is designed so an executive can:
 
 ```
     ┌──────────────────────────────────────────────┐
-    │              🔍 INTELLIGENCE (1:30am)          │
+    │              INTELLIGENCE (1:30am)          │
     │  Scans: Industry trends, GitHub, Research      │
     │  Produces: Daily Intelligence Report           │
     │  Feeds: Strategic Ideas → Ideas Pipeline        │
@@ -30,14 +30,14 @@ The Autonomous Sprint Cycle is designed so an executive can:
                    │ strategic inputs
                    ▼
     ┌──────────────────────────────────────────────┐
-    │              💡 STRATEGIC IDEAS PIPELINE       │
+    │              STRATEGIC IDEAS PIPELINE       │
     │  Executive evaluates from mobile               │
     │  Promote → Project Board  |  Archive           │
     └──────────────┬───────────────────────────────┘
                    │ approved initiatives
                    ▼
     ┌──────────────────────────────────────────────┐
-    │              📋 PROJECT BOARD                  │
+    │              PROJECT BOARD                  │
     │  pipeline → active → delivery → review        │
     │                                               │
     │  Development tasks ──→ Development Sprint     │
@@ -46,7 +46,7 @@ The Autonomous Sprint Cycle is designed so an executive can:
            │           │           │
            ▼           ▼           ▼
     ┌────────┐  ┌────────────┐  ┌──────────┐
-    │📋 Board│  │🎯 Operations│  │💻 Development│
+    │Board│  │Operations│  │Development│
     │ Audit  │  │   Sprint   │  │   Sprint  │
     │10:30am │  │3am/11am/   │  │    2am    │
     │6:30pm  │  │7pm         │  │           │
@@ -61,26 +61,26 @@ The Autonomous Sprint Cycle is designed so an executive can:
                       │              │
                       ▼              ▼
               ┌──────────────────────────────┐
-              │     ✅ DELIVERY READY          │
+              │     DELIVERY READY          │
               │  Dual distribution:           │
-              │  📁 Technical + ☁️ Executive   │
+              │  Technical + Executive   │
               └──────────────┬───────────────┘
                              │
                              ▼
               ┌──────────────────────────────┐
-              │     👀 EXECUTIVE REVIEW        │
+              │     EXECUTIVE REVIEW        │
               │  From mobile (cloud access)   │
               │                              │
-              │  ✅ Approve → completed        │
-              │  🔀 Expand → derivative tasks │
-              │  ❓ Request Info → analysis    │
-              │  💬 Comment → strategic input  │
-              │  ❌ Reject → workflow closure │
+              │  Approve → completed        │
+              │  Expand → derivative tasks │
+              │  Request Info → analysis    │
+              │  Comment → strategic input  │
+              │  Reject → workflow closure │
               └──────────────┬───────────────┘
                              │
                              ▼
               ┌──────────────────────────────┐
-              │     🔄 INTEGRATION (every 6h) │
+              │     INTEGRATION (every 6h) │
               │  Processes executive decisions │
               │  Merges approved development   │
               │  Initiates expanded workflows  │
@@ -98,18 +98,18 @@ The Autonomous Sprint Cycle is designed so an executive can:
 
 | # | Process | Schedule | Function | Business Equivalent |
 |---|---------|----------|----------|-------------------|
-| 1 | 🔍 **Intelligence Gathering** | 1:30am | Market/trend analysis, opportunity identification | Strategic Research |
-| 2 | 💻 **Development Sprint** | 2am | Software development, technical implementation | Engineering Operations |
-| 3 | 🎯 **Operations Sprint** | 3am, 11am, 7pm | Non-technical project execution | Business Operations |
-| 4 | ☀️ **Executive Brief** | 7am | Daily summary of overnight activities | Executive Dashboard |
-| 5 | 📋 **Board Audit** | 10:30am, 6:30pm | Quality assurance, workflow management | Project Management Office |
-| 6 | 🔄 **Integration Manager** | Every 6h | Processes executive decisions, system integration | Release Management |
+| 1 | **Intelligence Gathering** | 1:30am | Market/trend analysis, opportunity identification | Strategic Research |
+| 2 | **Development Sprint** | 2am | Software development, technical implementation | Engineering Operations |
+| 3 | **Operations Sprint** | 3am, 11am, 7pm | Non-technical project execution | Business Operations |
+| 4 | **Executive Brief** | 7am | Daily summary of overnight activities | Executive Dashboard |
+| 5 | **Board Audit** | 10:30am, 6:30pm | Quality assurance, workflow management | Project Management Office |
+| 6 | **Integration Manager** | Every 6h | Processes executive decisions, system integration | Release Management |
 
 ### Support Functions
 | Process | Schedule | Purpose |
 |---------|----------|---------|
-| 🧹 **System Maintenance** | Sunday 4am | Infrastructure hygiene |
-| 📊 **Analytics Review** | Monday 8am | Performance metrics |
+| **System Maintenance** | Sunday 4am | Infrastructure hygiene |
+| **Analytics Review** | Monday 8am | Performance metrics |
 
 ---
 
@@ -117,10 +117,28 @@ The Autonomous Sprint Cycle is designed so an executive can:
 
 ```
 Technical deliverables (github_link present)  →  Development Sprint only
-Business deliverables (non-technical)        →  Operations Sprint only
+Business deliverables (non-technical, light)  →  Operations Sprint only
+Heavy deliverables (content, draft, strategy) →  Direct session only (cron skips)
 Executive-reviewed items                      →  Integration Manager only
 Active project comments from executive       →  Board Audit + executing Sprint
 ```
+
+### Ticket Weight Classification
+
+Every ticket has a `deliverable_type` that determines routing:
+
+| Type | Weight | Handled By | Examples |
+|------|--------|------------|----------|
+| `research` | Light | Operations Sprint | Audits, evaluations, analysis |
+| `code` / `pr` / `feature` | Light | Development Sprint | PRs, features, fixes |
+| `config` / `ops` | Light | Operations Sprint | Setup, configuration |
+| `report` | Light | Operations Sprint | Automated reports |
+| `content` | **Heavy** | Direct session only | Blog posts, long-form content |
+| `draft` | **Heavy** | Direct session only | Long drafts for review |
+| `strategy` | **Heavy** | Direct session only | Roadmaps, planning |
+| `routine` | N/A | Cron routines | Recurring system tasks |
+
+**Heavy tickets require direct executive-AI collaboration.** Autonomous routines skip them and report them as "skipped — direct session only."
 
 ---
 
@@ -130,9 +148,9 @@ When reviewing completed deliverables:
 
 | Action | System Response | Executive Use Case |
 |--------|-----------------|-------------------|
-| ✅ **Approve** | Mark complete, close workflow | Deliverable meets requirements |
-| 🔀 **Expand** | Generate derivative tasks | Work reveals additional opportunities |
-| ❓ **Request Analysis** | Generate detailed report | Need additional context for decision |
+| **Approve** | Mark complete, close workflow | Deliverable meets requirements |
+| **Expand** | Generate derivative tasks | Work reveals additional opportunities |
+| **Request Analysis** | Generate detailed report | Need additional context for decision |
 
 **Default behavior:** Auto-approval for routine deliverables.
 
@@ -140,25 +158,25 @@ When reviewing completed deliverables:
 
 ## Information Architecture
 
-1. **Dual-channel delivery:** All deliverables accessible both technically and via executive dashboard
+1. **Dual-channel delivery:** All deliverables accessible both technically and via executive interface
 2. **Mobile-first design:** Assume executive access primarily through mobile devices
-3. **Cloud storage structure:**
+3. **Primary delivery: Notion** (rich content, navigable, mobile-friendly)
    ```
-   Executive Dashboard/
-   ├── ☀️ Daily Briefs/
-   ├── 🔍 Intelligence Reports/
-   ├── 📈 Strategic Analysis/
-   ├── 📊 Performance Metrics/
-   ├── 📝 Content Pipeline/
-   ├── 📋 Project Backlog/
-   └── 📺 Market Research/
+   Executive Workspace (Notion)/
+   ├── Reports/           ← Intelligence reports, analysis
+   ├── Daily Briefing/    ← Daily executive summaries
+   ├── Ideas & Research/  ← Findings, explorations
+   └── Drafts/            ← Content drafts for review
    ```
+4. **Secondary delivery: Google Drive** — Only for slides, spreadsheets, binary files, or sharing with third parties
+5. **Technical backup:** Workspace filesystem (source of truth for code/configs)
+6. **Ticket linking:** Every completed ticket must have a `doc_link` pointing to Notion or Drive
 
 ---
 
 ## Risk Mitigation (Lessons Learned)
 
-| ❌ Risk Factor | 🐛 Impact | ✅ Mitigation Strategy |
+| Risk Factor | Impact | Mitigation Strategy |
 |---------------|-----------|----------------------|
 | Auto-expansion of tasks | Scope creep, resource waste | Executive approval required for expansion |
 | Process overlap | Duplicate work, inefficiency | Clear workflow segregation rules |
