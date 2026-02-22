@@ -605,7 +605,7 @@ function renderCard(task, showActions) {
   if (showActions) {
     const cancelBtn = `<button style="border-color:#f85149;color:#f85149;" onclick="if(confirm('Cancel #${task.id}?'))updateTask(${task.id},{status:'archived'})">✕</button>`;
     if (task.status === 'todo') actions = `<button onclick="updateTask(${task.id},{status:'doing'})">▶ Start</button> ${cancelBtn}`;
-    else if (task.status === 'doing') actions = `<button onclick="updateTask(${task.id},{status:'todo'})">◀ To Do</button><button onclick="updateTask(${task.id},{status:'done'})">✅ Done</button> ${cancelBtn}`;
+    else if (task.status === 'doing') actions = `<button onclick="updateTask(${task.id},{status:'todo'})">◀ To Do</button><button onclick="markDone(${task.id},${!task.drive_link})">✅ Done</button> ${cancelBtn}`;
     else if (task.status === 'done' && !task.reviewed_by_owner) {
       if (task.assignee === 'human') {
         actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" style="border-color:#bc8cff;color:#bc8cff;" onclick="updateTask(${task.id},{assignee:'agent'})">🤖 ${CONFIG.agentName} Review</button> ${cancelBtn}`;
@@ -632,7 +632,7 @@ function renderCard(task, showActions) {
     ${task.parent_id ? `<div style="font-size:11px;margin-bottom:4px;padding:3px 8px;background:rgba(88,166,255,0.1);border-left:2px solid #58a6ff;border-radius:0 4px 4px 0;">↳ subtask of <span class="task-id" onclick="copyId('#${task.parent_id}',this)" style="font-size:10px">#${task.parent_id}</span></div>` : ''}
     ${projectRef ? `<div style="font-size:11px;color:#58a6ff;margin-bottom:4px;">📂 ${projectRef}</div>` : ''}
     ${task.description ? `<div class="card-desc">${task.description}</div>` : ''}
-    <div class="card-meta">${assigneeBadge} ${catBadge(task.deliverable_type || task.category || 'other')} ${prioLabel} ${reviewBadge} ${(() => {
+    <div class="card-meta">${assigneeBadge} ${catBadge(task.deliverable_type || task.category || 'other')} ${prioLabel} ${reviewBadge} ${!task.drive_link && task.status !== 'routine' && task.status !== 'archived' ? '<span class="badge" style="background:#3d2a0f;color:#d29922;" title="Missing Drive link (Golden Rule #7)">⚠️ No Drive</span>' : ''} ${(() => {
       if (!task.due_date) return '';
       const due = new Date(task.due_date + 'T23:59:59');
       const now = new Date();
@@ -1129,6 +1129,13 @@ function clearIdeaFilters() {
   document.getElementById('filter-idea-status').value = '';
   document.getElementById('filter-idea-tag').value = '';
   loadIdeas();
+}
+
+function markDone(id, missingDrive) {
+  if (missingDrive) {
+    if (!confirm('⚠️ This task has no Drive link.\n\nGolden Rule #7 requires dual delivery (workspace + Drive).\n\nMark as done anyway?')) return;
+  }
+  updateTask(id, {status:'done'});
 }
 
 loadConfig().then(() => load());
