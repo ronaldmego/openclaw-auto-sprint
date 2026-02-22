@@ -158,12 +158,32 @@
   .col-doing .column-header { background: #2a1f0f; color: #d29922; border-bottom: 2px solid #d29922; }
   .col-done .column-header { background: #0f2a1a; color: #3fb950; border-bottom: 2px solid #3fb950; }
 
+  /* Doc sections - collapsible */
+  .doc-section { transition: all 0.2s ease; }
+  .doc-header { transition: background-color 0.2s ease; }
+  .doc-header:hover { background: #21262d !important; }
+  .doc-content { 
+    transition: max-height 0.3s ease, opacity 0.2s ease; 
+    overflow: hidden; 
+  }
+  .doc-section.collapsed .doc-content { 
+    max-height: 0; 
+    opacity: 0; 
+    padding-top: 0; 
+    padding-bottom: 0; 
+  }
+  .doc-section.collapsed .collapse-indicator { 
+    transform: rotate(-90deg); 
+  }
+
   @media (max-width: 768px) {
     .board { flex-direction: column; }
     .column { max-width: 100%; }
     .stats { gap: 6px; }
     .stat { min-width: 70px; padding: 8px 10px; }
     .stat .num { font-size: 20px; }
+    .doc-header { font-size: 14px !important; padding: 10px 12px !important; }
+    .doc-content { padding: 12px !important; }
   }
 </style>
 </head>
@@ -317,17 +337,13 @@
 <div class="tab-content" id="tab-docs">
   <div class="section" style="max-width:800px;">
 
-    <!-- ASC Documentation -->
-    <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px;">
-      <h2 style="color:#f78166;font-size:16px;margin-bottom:12px;">📚 Autonomous Sprint Cycle</h2>
-      <div id="asc-content" style="font-size:13px;line-height:1.7;color:#c9d1d9;">
-        Loading documentation...
+    <!-- Quickstart (hardcoded, always at top) -->
+    <div class="doc-section" style="background:#161b22;border:1px solid #30363d;border-radius:8px;margin-bottom:16px;">
+      <div class="doc-header" style="background:#1a1f27;border-bottom:1px solid #30363d;padding:12px 16px;border-radius:8px 8px 0 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleDocSection(this)">
+        <h3 style="color:#f78166;font-size:16px;margin:0;">🚀 Quickstart</h3>
+        <span class="collapse-indicator" style="color:#8b949e;font-size:14px;transition:transform 0.2s;">▼</span>
       </div>
-    </div>
-
-    <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px;">
-      <h2 style="color:#f78166;font-size:16px;margin-bottom:12px;">🚀 Quickstart</h2>
-      <div style="font-size:13px;line-height:1.7;color:#c9d1d9;">
+      <div class="doc-content" style="padding:16px;font-size:13px;line-height:1.7;color:#c9d1d9;">
         <p><strong>What is this?</strong> OAS — OpenClaw Auto Sprint. A Kanban board where humans and agents coordinate tasks, routines, and reviews.</p>
         <p style="margin-top:8px;"><strong>Create a task:</strong> Click <span style="color:#58a6ff;">"+ New task"</span> above the board. Fill in title, assignee, priority, description, due date.</p>
         <p style="margin-top:8px;"><strong>Edit a task:</strong> Use the action buttons on each card (▶ Start, ✅ Done, 👀 Approve). Click on the priority to change it. Click on the assignee badge to reassign. Click on the date to change due date.</p>
@@ -336,8 +352,9 @@
       </div>
     </div>
 
-    <div id="reglas-content" style="font-size:13px;line-height:1.7;color:#c9d1d9;">
-      <p style="color:#8b949e;">Loading rules...</p>
+    <!-- Dynamic docs sections will be loaded here -->
+    <div id="dynamic-docs-container">
+      <p style="color:#8b949e;text-align:center;padding:20px;">Loading documentation...</p>
     </div>
 
   </div>
@@ -458,22 +475,63 @@ async function loadTools() {
   } catch(e) { console.error('Failed to load tools', e); }
 }
 
-let ascLoaded = false;
+let docsLoaded = false;
 async function loadASC() {
-  if (ascLoaded) return;
+  if (docsLoaded) return;
   try {
-    const res = await fetch(API + '/asc');
-    const { content } = await res.json();
-    const el = document.getElementById('asc-content');
-    if (typeof marked !== 'undefined') {
-      el.innerHTML = marked.parse(content);
-    } else {
-      el.innerHTML = '<pre>' + content + '</pre>';
-    }
-    ascLoaded = true;
+    const res = await fetch(API + '/docs');
+    const docs = await res.json();
+    renderDynamicDocs(docs);
+    docsLoaded = true;
   } catch(e) { 
-    console.error('Failed to load ASC', e);
-    document.getElementById('asc-content').innerHTML = '<p style="color:#f85149;">Failed to load Autonomous Sprint Cycle documentation</p>';
+    console.error('Failed to load docs', e);
+    document.getElementById('dynamic-docs-container').innerHTML = '<p style="color:#f85149;">Failed to load documentation</p>';
+  }
+}
+
+function renderDynamicDocs(docs) {
+  const container = document.getElementById('dynamic-docs-container');
+  let html = '';
+  
+  docs.forEach((doc, index) => {
+    const isFirstDoc = index === 0; // First doc (ASC) should be expanded by default
+    const collapsedClass = isFirstDoc ? '' : 'collapsed';
+    
+    // Icon mapping for different doc types
+    let icon = '📄';
+    if (doc.slug === 'autonomous-sprint-cycle') icon = '📚';
+    else if (doc.slug === 'golden-rules') icon = '⭐';
+    else if (doc.slug === 'board-autonomy-architecture') icon = '🏗️';
+    else if (doc.slug === 'ticket-anatomy') icon = '🎫';
+    else if (doc.slug === 'golden-rules-changelog') icon = '📋';
+    
+    html += `
+      <div class="doc-section ${collapsedClass}" style="background:#161b22;border:1px solid #30363d;border-radius:8px;margin-bottom:16px;">
+        <div class="doc-header" style="background:#1a1f27;border-bottom:1px solid #30363d;padding:12px 16px;border-radius:8px 8px 0 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleDocSection(this)">
+          <h3 style="color:#f78166;font-size:16px;margin:0;">${icon} ${doc.title}</h3>
+          <span class="collapse-indicator" style="color:#8b949e;font-size:14px;transition:transform 0.2s;">${isFirstDoc ? '▼' : '▶'}</span>
+        </div>
+        <div class="doc-content" style="padding:16px;font-size:13px;line-height:1.7;color:#c9d1d9;">
+          ${typeof marked !== 'undefined' ? marked.parse(doc.content) : '<pre>' + doc.content + '</pre>'}
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+// Function to toggle doc sections
+function toggleDocSection(headerElement) {
+  const section = headerElement.parentElement;
+  const indicator = headerElement.querySelector('.collapse-indicator');
+  
+  section.classList.toggle('collapsed');
+  
+  if (section.classList.contains('collapsed')) {
+    indicator.textContent = '▶';
+  } else {
+    indicator.textContent = '▼';
   }
 }
 

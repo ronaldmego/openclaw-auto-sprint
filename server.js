@@ -95,6 +95,69 @@ app.get('/api/asc', (req, res) => {
   }
 });
 
+// Helper function to extract title from markdown content
+function extractTitleFromMd(content) {
+  const lines = content.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('# ')) {
+      return trimmed.substring(2).trim();
+    }
+  }
+  return null;
+}
+
+// API: Get all docs from docs/ folder + Golden Rules
+app.get('/api/docs', (req, res) => {
+  const docs = [];
+  
+  // Define the order of sections as specified
+  const orderedFiles = [
+    'autonomous-sprint-cycle.md',
+    'board-autonomy-architecture.md', 
+    'ticket-anatomy.md',
+    'golden-rules-changelog.md'
+  ];
+  
+  try {
+    // Read all docs/ files in specified order
+    for (const filename of orderedFiles) {
+      const filePath = path.join(__dirname, 'docs', filename);
+      try {
+        const content = fs.readFileSync(filePath, 'utf8');
+        const title = extractTitleFromMd(content) || filename.replace('.md', '').replace(/-/g, ' ');
+        const slug = filename.replace('.md', '');
+        docs.push({ slug, title, content });
+      } catch (e) {
+        console.warn(`Could not read ${filename}:`, e.message);
+      }
+    }
+    
+    // Add Golden Rules from workspace
+    const goldenRulesPath = path.join(WORKSPACE, 'OAS-GOLDEN-RULES.md');
+    try {
+      const content = fs.readFileSync(goldenRulesPath, 'utf8');
+      const title = extractTitleFromMd(content) || 'Golden Rules';
+      docs.splice(1, 0, { slug: 'golden-rules', title, content }); // Insert as second item
+    } catch (e) {
+      // Try alternative filename
+      const altPath = path.join(WORKSPACE, 'OCC-GOLDEN-RULES.md');
+      try {
+        const content = fs.readFileSync(altPath, 'utf8');
+        const title = extractTitleFromMd(content) || 'Golden Rules';
+        docs.splice(1, 0, { slug: 'golden-rules', title, content }); // Insert as second item
+      } catch (e2) {
+        console.warn('Could not find Golden Rules file:', e.message, e2.message);
+      }
+    }
+    
+    res.json(docs);
+  } catch (e) {
+    console.error('Error loading docs:', e);
+    res.status(500).json({ error: 'Failed to load documentation' });
+  }
+});
+
 // API: Get brain files (workspace .md files for visibility)
 app.get('/api/brain', (req, res) => {
   const ALLOWED_ROOT = ['SOUL.md', 'IDENTITY.md', 'USER.md', 'MEMORY.md', 'AGENTS.md', 'HEARTBEAT.md'];
