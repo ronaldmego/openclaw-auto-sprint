@@ -72,6 +72,16 @@
   .card-actions button { font-size: 11px; padding: 3px 10px; border-radius: 4px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; }
   .card-actions button:hover { background: #30363d; }
   .card-actions button.review-btn { border-color: #f78166; color: #f78166; }
+  .review-label { font-size: 11px; color: #d29922; font-weight: 600; margin-bottom: 4px; }
+  .review-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 8px; background: #1a1f27; border: 1px solid #30363d; border-radius: 6px; }
+  .review-actions .review-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .review-actions button { font-size: 13px; padding: 8px 14px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; flex: 1; min-width: 80px; font-weight: 600; }
+  .review-actions button:hover { background: #30363d; }
+  .review-actions button.btn-close { border-color: #3fb950; color: #3fb950; }
+  .review-actions button.btn-expand { border-color: #58a6ff; color: #58a6ff; }
+  .review-actions button.btn-info { border-color: #d29922; color: #d29922; }
+  .review-actions button.btn-back { border-color: #8b949e; color: #8b949e; }
+  .no-drive-warning { background: #3d2a0f; color: #d29922; font-size: 11px; padding: 4px 8px; border-radius: 4px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
 
   .comments { margin-top: 8px; border-top: 1px solid #21262d; padding-top: 6px; }
   .comment { padding: 4px 0; font-size: 11px; border-bottom: 1px solid #161b22; }
@@ -609,12 +619,28 @@ function renderCard(task, showActions) {
   if (showActions) {
     const cancelBtn = `<button style="border-color:#f85149;color:#f85149;" onclick="if(confirm('Cancel #${task.id}?'))updateTask(${task.id},{status:'archived'})">✕</button>`;
     if (task.status === 'todo') actions = `<button onclick="updateTask(${task.id},{status:'doing'})">▶ Start</button> ${cancelBtn}`;
-    else if (task.status === 'doing') actions = `<button onclick="updateTask(${task.id},{status:'todo'})">◀ To Do</button><button onclick="updateTask(${task.id},{status:'done'})">✅ Done</button> ${cancelBtn}`;
+    else if (task.status === 'doing') actions = `<button onclick="updateTask(${task.id},{status:'todo'})">◀ To Do</button><button onclick="markDone(${task.id},${!task.drive_link})">✅ Done</button> ${cancelBtn}`;
     else if (task.status === 'done' && !task.reviewed_by_owner) {
       if (task.assignee === 'human') {
-        actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" style="border-color:#bc8cff;color:#bc8cff;" onclick="updateTask(${task.id},{assignee:'agent'})">🤖 ${CONFIG.agentName} Review</button> ${cancelBtn}`;
+        actions = `<div class="review-actions">
+          <div class="review-label">📋 Send for review:</div>
+          <div class="review-row">
+            <button class="btn-back" onclick="updateTask(${task.id},{status:'doing'})">◀ Back</button>
+            <button style="border-color:#bc8cff;color:#bc8cff;" onclick="updateTask(${task.id},{assignee:'agent'})">🤖 ${CONFIG.agentName} Review</button>
+          </div>
+        </div>`;
       } else {
-        actions = `<button onclick="updateTask(${task.id},{status:'doing'})">◀ Doing</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'close'})">✅ Close</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'expand'})">🔀 Expand</button><button class="review-btn" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'need_info'})">❓ Need Info</button> ${cancelBtn}`;
+        actions = `<div class="review-actions">
+          <div class="review-label">👀 Your review:</div>
+          <div class="review-row">
+            <button class="btn-close" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'close'})">✅ Approve</button>
+            <button class="btn-expand" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'expand'})">🔀 Expand</button>
+          </div>
+          <div class="review-row">
+            <button class="btn-info" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'need_info'})">❓ Need Info</button>
+            <button class="btn-back" onclick="updateTask(${task.id},{status:'doing'})">◀ Back</button>
+          </div>
+        </div>`;
       }
     }
   }
@@ -636,7 +662,7 @@ function renderCard(task, showActions) {
     ${task.parent_id ? `<div style="font-size:11px;margin-bottom:4px;padding:3px 8px;background:rgba(88,166,255,0.1);border-left:2px solid #58a6ff;border-radius:0 4px 4px 0;">↳ subtask of <span class="task-id" onclick="copyId('#${task.parent_id}',this)" style="font-size:10px">#${task.parent_id}</span></div>` : ''}
     ${projectRef ? `<div style="font-size:11px;color:#58a6ff;margin-bottom:4px;">📂 ${projectRef}</div>` : ''}
     ${task.description ? `<div class="card-desc">${task.description}</div>` : ''}
-    <div class="card-meta">${assigneeBadge} ${catBadge(task.deliverable_type || task.category || 'other')} ${prioLabel} ${reviewBadge} ${(() => {
+    <div class="card-meta">${assigneeBadge} ${catBadge(task.deliverable_type || task.category || 'other')} ${prioLabel} ${reviewBadge} ${!task.drive_link && task.status !== 'routine' && task.status !== 'archived' ? '<span class="badge" style="background:#3d2a0f;color:#d29922;" title="Missing Drive link (Golden Rule #7)">⚠️ No Drive</span>' : ''} ${(() => {
       if (!task.due_date) return '';
       const due = new Date(task.due_date + 'T23:59:59');
       const now = new Date();
@@ -1211,6 +1237,13 @@ function applyCollapsedState() {
   });
 }
 applyCollapsedState();
+
+function markDone(id, missingDrive) {
+  if (missingDrive) {
+    if (!confirm('⚠️ No Drive link.\n\nGolden Rule #7: dual delivery (workspace + Drive).\n\nMark as done anyway?')) return;
+  }
+  updateTask(id, {status:'done'});
+}
 
 loadConfig().then(() => load());
 setInterval(load, 30000);
