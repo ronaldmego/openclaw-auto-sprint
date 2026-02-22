@@ -84,6 +84,17 @@ app.get('/api/reglas', (req, res) => {
   }
 });
 
+// API: Get ASC documentation
+app.get('/api/asc', (req, res) => {
+  const ascPath = path.join(__dirname, 'docs', 'autonomous-sprint-cycle.md');
+  try {
+    const content = fs.readFileSync(ascPath, 'utf8');
+    res.json({ content });
+  } catch (e) {
+    res.status(404).json({ error: 'autonomous-sprint-cycle.md not found' });
+  }
+});
+
 // API: Get brain files (workspace .md files for visibility)
 app.get('/api/brain', (req, res) => {
   const ALLOWED_ROOT = ['SOUL.md', 'IDENTITY.md', 'USER.md', 'MEMORY.md', 'AGENTS.md', 'HEARTBEAT.md'];
@@ -483,6 +494,6 @@ function initializeData() {
 initializeData();
 
 app.listen(PORT, HOST, () => {
-  console.log(`OCC Dashboard running at http://${HOST}:${PORT}`);
+  console.log(`OAS Dashboard running at http://${HOST}:${PORT}`);
   console.log(`Data directory initialized at: ${path.dirname(DB_FILE)}`);
 });

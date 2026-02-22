@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<title>OCC — OpenClaw Command Center</title>
+<title>OAS — OpenClaw Auto Sprint</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
@@ -170,7 +170,7 @@
 <body>
 
 <div class="header">
-  <h1><span>OCC</span> — OpenClaw Command Center</h1>
+  <h1><span>OAS</span> — OpenClaw Auto Sprint</h1>
   <div style="text-align:right">
     <div id="clock" style="color:#8b949e;font-size:13px"></div>
     <div id="last-pulse" style="color:#484f58;font-size:11px"></div>
@@ -317,10 +317,18 @@
 <div class="tab-content" id="tab-docs">
   <div class="section" style="max-width:800px;">
 
+    <!-- ASC Documentation -->
+    <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px;">
+      <h2 style="color:#f78166;font-size:16px;margin-bottom:12px;">📚 Autonomous Sprint Cycle</h2>
+      <div id="asc-content" style="font-size:13px;line-height:1.7;color:#c9d1d9;">
+        Loading documentation...
+      </div>
+    </div>
+
     <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px;">
       <h2 style="color:#f78166;font-size:16px;margin-bottom:12px;">🚀 Quickstart</h2>
       <div style="font-size:13px;line-height:1.7;color:#c9d1d9;">
-        <p><strong>What is this?</strong> OCC — OpenClaw Command Center. A Kanban board where humans and agents coordinate tasks, routines, and reviews.</p>
+        <p><strong>What is this?</strong> OAS — OpenClaw Auto Sprint. A Kanban board where humans and agents coordinate tasks, routines, and reviews.</p>
         <p style="margin-top:8px;"><strong>Create a task:</strong> Click <span style="color:#58a6ff;">"+ New task"</span> above the board. Fill in title, assignee, priority, description, due date.</p>
         <p style="margin-top:8px;"><strong>Edit a task:</strong> Use the action buttons on each card (▶ Start, ✅ Done, 👀 Approve). Click on the priority to change it. Click on the assignee badge to reassign. Click on the date to change due date.</p>
         <p style="margin-top:8px;"><strong>Comments:</strong> Click "💬 comments" to open, write feedback and send.</p>
@@ -389,6 +397,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 const API = '/api';
 
@@ -427,6 +436,9 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (tab.dataset.tab === 'brain') {
       loadBrain();
     }
+    if (tab.dataset.tab === 'docs') {
+      loadASC();
+    }
     if (tab.dataset.tab === 'ideas') {
       loadIdeas();
     }
@@ -444,6 +456,25 @@ async function loadTools() {
     el.innerHTML = renderToolsMd(content);
     toolsLoaded = true;
   } catch(e) { console.error('Failed to load tools', e); }
+}
+
+let ascLoaded = false;
+async function loadASC() {
+  if (ascLoaded) return;
+  try {
+    const res = await fetch(API + '/asc');
+    const { content } = await res.json();
+    const el = document.getElementById('asc-content');
+    if (typeof marked !== 'undefined') {
+      el.innerHTML = marked.parse(content);
+    } else {
+      el.innerHTML = '<pre>' + content + '</pre>';
+    }
+    ascLoaded = true;
+  } catch(e) { 
+    console.error('Failed to load ASC', e);
+    document.getElementById('asc-content').innerHTML = '<p style="color:#f85149;">Failed to load Autonomous Sprint Cycle documentation</p>';
+  }
 }
 
 function renderToolsMd(md) {
