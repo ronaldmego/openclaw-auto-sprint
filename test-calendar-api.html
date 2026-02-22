@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Calendar API</title>
+</head>
+<body>
+    <h1>Calendar API Test</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/crons');
+                const data = await response.json();
+                
+                document.getElementById('result').innerHTML = `
+                    <h2>API Response (${response.status})</h2>
+                    <p><strong>Jobs found:</strong> ${data.jobs ? data.jobs.length : 0}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                console.log('API Success:', data);
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h2>API Error</h2>
+                    <p>${error.message}</p>
+                `;
+                console.error('API Error:', error);
+            }
+        }
+        
+        // Test on load
+        testAPI();
+    </script>
+</body>
+</html>
