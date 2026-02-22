@@ -122,7 +122,11 @@
   /* Board view */
   .board { display: flex; gap: 16px; padding: 12px 20px; overflow-x: auto; }
   .column { flex: 1; min-width: 260px; max-width: 400px; }
-  .column-header { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 8px 12px; border-radius: 6px 6px 0 0; }
+  .column-header { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 8px 12px; border-radius: 6px 6px 0 0; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; }
+  .column-header .collapse-icon { font-size: 10px; transition: transform 0.2s; }
+  .column-header .collapse-icon.collapsed { transform: rotate(-90deg); }
+  .column.collapsed .cards { display: none; }
+  .column.collapsed .column-header { border-radius: 6px; opacity: 0.7; }
   .col-todo .column-header { background: #1a2332; color: #79c0ff; border-bottom: 2px solid #79c0ff; }
   .col-doing .column-header { background: #2a1f0f; color: #d29922; border-bottom: 2px solid #d29922; }
   .col-done .column-header { background: #0f2a1a; color: #3fb950; border-bottom: 2px solid #3fb950; }
@@ -227,21 +231,21 @@
   </details>
 
   <div class="board">
-    <div class="column col-todo">
-      <div class="column-header">📋 To Do</div>
+    <div class="column col-todo" id="section-todo">
+      <div class="column-header" onclick="toggleSection('todo')">📋 To Do <span id="count-todo" style="font-size:11px;color:#8b949e;font-weight:400;"></span><span class="collapse-icon" id="icon-todo">▼</span></div>
       <div class="cards" id="cards-todo"></div>
     </div>
-    <div class="column col-doing">
-      <div class="column-header">⚡ Doing</div>
+    <div class="column col-doing" id="section-doing">
+      <div class="column-header" onclick="toggleSection('doing')">⚡ Doing <span id="count-doing" style="font-size:11px;color:#8b949e;font-weight:400;"></span><span class="collapse-icon" id="icon-doing">▼</span></div>
       <div class="cards" id="cards-doing"></div>
     </div>
-    <div class="column col-done">
-      <div class="column-header">👀 Review</div>
+    <div class="column col-done" id="section-review">
+      <div class="column-header" onclick="toggleSection('review')">👀 Review <span id="count-review" style="font-size:11px;color:#8b949e;font-weight:400;"></span><span class="collapse-icon" id="icon-review">▼</span></div>
       <div class="cards" id="cards-review"></div>
     </div>
   </div>
-  <div class="routine-section" style="margin:0 20px 12px;">
-    <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;color:#d29922;">🔄 Routines <span id="routine-count" style="font-size:11px;color:#8b949e;font-weight:400;"></span></div>
+  <div class="routine-section" style="margin:0 20px 12px;" id="section-routine">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;color:#d29922;cursor:pointer;user-select:none;" onclick="toggleSection('routine')">🔄 Routines <span id="routine-count" style="font-size:11px;color:#8b949e;font-weight:400;"></span><span class="collapse-icon" id="icon-routine" style="font-size:10px;margin-left:auto;">▼</span></div>
     <div class="cards" id="cards-routine"></div>
   </div>
 
@@ -712,14 +716,20 @@ function renderBoard(tasks) {
   const reviewTasks = nonRoutine.filter(t => t.status === 'done' && !t.reviewed_by_owner);
   const closedTasks = nonRoutine.filter(t => t.status === 'done' && t.reviewed_by_owner);
 
+  const todoTasks = nonRoutine.filter(t=>t.status==='todo');
+  const doingTasks = nonRoutine.filter(t=>t.status==='doing');
   const empty = '<div style="color:#484f58;padding:12px;font-size:12px">—</div>';
-  document.getElementById('cards-todo').innerHTML = nonRoutine.filter(t=>t.status==='todo').map(t=>renderCard(t,true)).join('') || empty;
-  document.getElementById('cards-doing').innerHTML = nonRoutine.filter(t=>t.status==='doing').map(t=>renderCard(t,true)).join('') || empty;
+  document.getElementById('cards-todo').innerHTML = todoTasks.map(t=>renderCard(t,true)).join('') || empty;
+  document.getElementById('cards-doing').innerHTML = doingTasks.map(t=>renderCard(t,true)).join('') || empty;
   document.getElementById('cards-review').innerHTML = reviewTasks.map(t=>renderCard(t,true)).join('') || empty;
   document.getElementById('cards-routine').innerHTML = routineTasks.map(t=>renderCard(t,false)).join('') || empty;
+  document.getElementById('count-todo').textContent = `(${todoTasks.length})`;
+  document.getElementById('count-doing').textContent = `(${doingTasks.length})`;
+  document.getElementById('count-review').textContent = `(${reviewTasks.length})`;
   document.getElementById('routine-count').textContent = `(${routineTasks.length})`;
   document.getElementById('cards-closed').innerHTML = closedTasks.map(t=>renderCard(t,false)).join('') || '<div style="color:#484f58;padding:12px;font-size:12px">Nothing closed yet</div>';
   document.getElementById('closed-count').textContent = `(${closedTasks.length})`;
+  applyCollapsedState();
 }
 
 // Track which comment sections are open
@@ -1130,6 +1140,40 @@ function clearIdeaFilters() {
   document.getElementById('filter-idea-tag').value = '';
   loadIdeas();
 }
+
+// Collapsible sections with localStorage persistence
+const COLLAPSE_KEY = 'occ-collapsed-sections';
+function getCollapsedSections() {
+  try { return JSON.parse(localStorage.getItem(COLLAPSE_KEY)) || {}; } catch { return {}; }
+}
+function saveCollapsedSections(state) {
+  localStorage.setItem(COLLAPSE_KEY, JSON.stringify(state));
+}
+function toggleSection(name) {
+  const state = getCollapsedSections();
+  state[name] = !state[name];
+  saveCollapsedSections(state);
+  applyCollapsedState();
+}
+function applyCollapsedState() {
+  const state = getCollapsedSections();
+  // Default: todo/doing expanded, review/routine/closed collapsed
+  const defaults = { todo: false, doing: false, review: true, routine: true, closed: true };
+  ['todo','doing','review','routine'].forEach(name => {
+    const collapsed = state[name] !== undefined ? state[name] : (defaults[name] || false);
+    const section = document.getElementById('section-' + name);
+    const icon = document.getElementById('icon-' + name);
+    if (section) {
+      if (collapsed) { section.classList.add('collapsed'); }
+      else { section.classList.remove('collapsed'); }
+    }
+    if (icon) {
+      if (collapsed) { icon.classList.add('collapsed'); }
+      else { icon.classList.remove('collapsed'); }
+    }
+  });
+}
+applyCollapsedState();
 
 loadConfig().then(() => load());
 setInterval(load, 30000);
