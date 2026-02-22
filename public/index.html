@@ -95,6 +95,23 @@
   .comment-toggle { font-size: 11px; color: #8b949e; cursor: pointer; margin-top: 6px; }
   .comment-toggle:hover { color: #58a6ff; }
 
+  /* Deliverable Type Dropdown */
+  .deliverable-type-dropdown { 
+    font-family: inherit; 
+    font-weight: 600; 
+    transition: all 0.2s ease; 
+    max-width: 200px;
+  }
+  .deliverable-type-dropdown:hover { 
+    border-color: #58a6ff; 
+    box-shadow: 0 0 0 1px rgba(88,166,255,0.3); 
+  }
+  .deliverable-type-dropdown:focus { 
+    outline: none; 
+    border-color: #58a6ff; 
+    box-shadow: 0 0 0 2px rgba(88,166,255,0.3); 
+  }
+
   /* Activity log */
   .activity-log { max-height: 250px; overflow-y: auto; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-family: monospace; margin: 0 20px 12px; }
 
@@ -578,12 +595,82 @@ function formatDate(d) {
 }
 
 function catBadge(cat) {
-  const map = { security: 'badge-security', content: 'badge-content', dev: 'badge-dev', ops: 'badge-ops', research: 'badge-research' };
-  const labels = { security: '🔒 Security', content: '📝 Content', dev: '💻 Dev', ops: '⚙️ Ops', research: '🔍 Research',
-    blog: '📝 Blog', code: '💻 Code', draft: '✏️ Draft', dashboard: '📊 Dashboard', other: '📌 Other' };
+  const map = { 
+    research: 'badge-research', 
+    code: 'badge-dev', 
+    pr: 'badge-dev', 
+    feature: 'badge-dev', 
+    config: 'badge-ops', 
+    ops: 'badge-ops', 
+    report: 'badge-other',
+    content: 'badge-content', 
+    draft: 'badge-content', 
+    strategy: 'badge-content',
+    routine: 'badge-routine',
+    other: 'badge-other'
+  };
+  
+  const labels = { 
+    research: '🔍 Research', 
+    code: '💻 Code', 
+    pr: '🔀 Pull Request', 
+    feature: '✨ Feature', 
+    config: '⚙️ Config', 
+    ops: '🔧 Ops', 
+    report: '📊 Report',
+    content: '⚠️ 📝 Content', 
+    draft: '⚠️ ✏️ Draft', 
+    strategy: '⚠️ 🗺️ Strategy',
+    routine: '🔄 Routine',
+    other: '📌 Other'
+  };
+  
   const cls = map[cat] || 'badge-other';
   const label = labels[cat] || cat;
   return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function deliverableTypeDropdown(task) {
+  const options = [
+    { value: 'research', label: '🔍 Research — Investigación, auditorías' },
+    { value: 'code', label: '💻 Code — Desarrollo, código' },
+    { value: 'pr', label: '🔀 Pull Request' },
+    { value: 'feature', label: '✨ Feature — Feature nueva' },
+    { value: 'config', label: '⚙️ Config — Configuración, setup' },
+    { value: 'ops', label: '🔧 Ops — Operaciones' },
+    { value: 'report', label: '📊 Report — Reportes automáticos' },
+    { value: 'content', label: '⚠️ 📝 Content — HEAVY — Blog posts, contenido largo', heavy: true },
+    { value: 'draft', label: '⚠️ ✏️ Draft — HEAVY — Borradores largos', heavy: true },
+    { value: 'strategy', label: '⚠️ 🗺️ Strategy — HEAVY — Roadmaps, planificación', heavy: true },
+    { value: 'routine', label: '🔄 Routine — Rutinas/crons' },
+    { value: 'other', label: '📌 Other — Sin clasificar' }
+  ];
+  
+  const currentType = task.deliverable_type || 'other';
+  const currentOption = options.find(opt => opt.value === currentType) || options.find(opt => opt.value === 'other');
+  
+  const dropdownId = `deliverable-type-${task.id}`;
+  
+  return `
+    <select id="${dropdownId}" 
+            class="deliverable-type-dropdown" 
+            style="background: ${currentOption.heavy ? '#3d2a0f' : '#161b22'}; 
+                   border: 1px solid #30363d; 
+                   color: ${currentOption.heavy ? '#d29922' : '#c9d1d9'}; 
+                   padding: 2px 6px; 
+                   border-radius: 4px; 
+                   font-size: 10px; 
+                   cursor: pointer;"
+            onchange="updateDeliverableType(${task.id}, this.value)">
+      ${options.map(opt => `
+        <option value="${opt.value}" 
+                ${opt.value === currentType ? 'selected' : ''}
+                style="background: ${opt.heavy ? '#3d2a0f' : '#161b22'}; color: ${opt.heavy ? '#d29922' : '#c9d1d9'};">
+          ${opt.label}
+        </option>
+      `).join('')}
+    </select>
+  `;
 }
 
 function renderCard(task, showActions) {
@@ -662,7 +749,7 @@ function renderCard(task, showActions) {
     ${task.parent_id ? `<div style="font-size:11px;margin-bottom:4px;padding:3px 8px;background:rgba(88,166,255,0.1);border-left:2px solid #58a6ff;border-radius:0 4px 4px 0;">↳ subtask of <span class="task-id" onclick="copyId('#${task.parent_id}',this)" style="font-size:10px">#${task.parent_id}</span></div>` : ''}
     ${projectRef ? `<div style="font-size:11px;color:#58a6ff;margin-bottom:4px;">📂 ${projectRef}</div>` : ''}
     ${task.description ? `<div class="card-desc">${task.description}</div>` : ''}
-    <div class="card-meta">${assigneeBadge} ${catBadge(task.deliverable_type || task.category || 'other')} ${prioLabel} ${reviewBadge} ${!task.drive_link && task.status !== 'routine' && task.status !== 'archived' ? '<span class="badge" style="background:#3d2a0f;color:#d29922;" title="Missing Drive link (Golden Rule #7)">⚠️ No Drive</span>' : ''} ${(() => {
+    <div class="card-meta">${assigneeBadge} ${deliverableTypeDropdown(task)} ${prioLabel} ${reviewBadge} ${!task.drive_link && task.status !== 'routine' && task.status !== 'archived' ? '<span class="badge" style="background:#3d2a0f;color:#d29922;" title="Missing Drive link (Golden Rule #7)">⚠️ No Drive</span>' : ''} ${(() => {
       if (!task.due_date) return '';
       const due = new Date(task.due_date + 'T23:59:59');
       const now = new Date();
@@ -894,6 +981,30 @@ async function updateTask(id, fields) {
   await fetch(API+'/tasks/'+id, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(fields) });
   await load();
   window.scrollTo(0, scrollY);
+}
+
+async function updateDeliverableType(taskId, newType) {
+  try {
+    const scrollY = window.scrollY;
+    const response = await fetch(API + '/tasks/' + taskId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deliverable_type: newType })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update deliverable type');
+    }
+    
+    // Reload to refresh the UI
+    await load();
+    window.scrollTo(0, scrollY);
+  } catch (error) {
+    console.error('Error updating deliverable type:', error);
+    // Show error to user and revert dropdown
+    alert('Error updating deliverable type. Please try again.');
+    await load(); // Reload to reset dropdown to original value
+  }
 }
 
 async function addComment(taskId) {
