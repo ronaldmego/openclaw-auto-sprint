@@ -763,12 +763,37 @@ function renderCard(task, showActions) {
       : '<span class="badge badge-review">⏳ Pending Review</span>';
   }
 
+  // Deliverable type badge (PR #N, Issue #N, Research, etc.)
+  let deliverableBadge = '';
+  if (task.deliverable_type && task.deliverable_type !== 'other') {
+    const dtLabel = task.deliverable_type.toUpperCase();
+    let dtExtra = '';
+    if (task.deliverable_type === 'pr' && task.deliverable_url) {
+      const prMatch = task.deliverable_url.match(/\/pull\/(\d+)/);
+      if (prMatch) dtExtra = ' #' + prMatch[1];
+    }
+    const dtColor = task.deliverable_type === 'pr' ? '#f78166' : '#58a6ff';
+    const dtBg = task.deliverable_type === 'pr' ? '#3d1a0f' : '#0d1d30';
+    const dtTooltip = task.deliverable_type === 'pr' ? 'Este ticket entrega un Pull Request. Approve = merge automático.' : 'Tipo de entregable: ' + dtLabel;
+    deliverableBadge = `<span class="badge" style="background:${dtBg};color:${dtColor}" title="${dtTooltip}">📦 ${dtLabel}${dtExtra}</span>`;
+  }
+
+  // Smart links with tooltips and extracted issue/PR numbers
   let links = '';
   if (task.drive_link || task.github_link || task.deliverable_url) {
     links = '<div class="card-links">';
-    if (task.drive_link) links += `<a class="card-link link-drive" href="${task.drive_link}" target="_blank">📄 Drive</a>`;
-    if (task.github_link) links += `<a class="card-link link-github" href="${task.github_link}" target="_blank">🔗 GitHub</a>`;
-    if (task.deliverable_url) links += `<a class="card-link link-drive" href="${task.deliverable_url}" target="_blank">📎 Link</a>`;
+    if (task.github_link) {
+      const issueMatch = task.github_link.match(/\/issues\/(\d+)/);
+      const issueLabel = issueMatch ? 'Issue #' + issueMatch[1] : 'GitHub';
+      links += `<a class="card-link link-github" href="${task.github_link}" target="_blank" title="GitHub Issue — click para ver detalles del issue">🔗 ${issueLabel}</a>`;
+    }
+    if (task.deliverable_url) {
+      const prMatch = task.deliverable_url.match(/\/pull\/(\d+)/);
+      const delLabel = prMatch ? 'PR #' + prMatch[1] : 'Deliverable';
+      const delTooltip = prMatch ? 'Pull Request — Approve mergeará este PR automáticamente' : 'URL del entregable';
+      links += `<a class="card-link link-drive" href="${task.deliverable_url}" target="_blank" title="${delTooltip}">📎 ${delLabel}</a>`;
+    }
+    if (task.drive_link) links += `<a class="card-link link-drive" href="${task.drive_link}" target="_blank" title="Archivo en Google Drive — accesible desde el teléfono">📄 Drive</a>`;
     links += '</div>';
   }
 
@@ -787,15 +812,16 @@ function renderCard(task, showActions) {
           </div>
         </div>`;
       } else {
+        const approveTooltip = task.deliverable_type === 'pr' ? 'Cierra el ticket y MERGEA el PR automáticamente' : 'Cierra el ticket como completado';
         actions = `<div class="review-actions">
           <div class="review-label">👀 Your review:</div>
           <div class="review-row">
-            <button class="btn-close" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'close'})">✅ Approve</button>
-            <button class="btn-expand" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'expand'})">🔀 Expand</button>
+            <button class="btn-close" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'close'})" title="${approveTooltip}">✅ Approve</button>
+            <button class="btn-expand" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'expand'})" title="Crea sub-tickets a partir de este ticket">🔀 Expand</button>
           </div>
           <div class="review-row">
-            <button class="btn-info" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'need_info'})">❓ Need Info</button>
-            <button class="btn-back" onclick="updateTask(${task.id},{status:'doing'})">◀ Back</button>
+            <button class="btn-info" onclick="updateTask(${task.id},{reviewed_by_owner:1,review_action:'need_info'})" title="Devuelve el ticket pidiendo más información">❓ Need Info</button>
+            <button class="btn-back" onclick="updateTask(${task.id},{status:'doing'})" title="Regresa el ticket a Doing para más trabajo">◀ Back</button>
           </div>
         </div>`;
       }
@@ -807,9 +833,11 @@ function renderCard(task, showActions) {
     `<div class="comment"><span class="comment-author">${c.author}</span><span class="comment-time">${formatDate(c.timestamp)}</span><div class="comment-text">${c.text}</div></div>`
   ).join('');
 
-  const assigneeLabel = task.assignee === 'human' ? '👤 ' + CONFIG.humanName : '🤖 ' + CONFIG.agentName;
+  // Smart assignee badge: show "👀 Your Review" when ticket is in review state for human
+  const isInReview = task.status === 'done' && !task.reviewed_by_owner && task.assignee !== 'human';
+  const assigneeLabel = isInReview ? '👀 Your Review' : (task.assignee === 'human' ? '👤 ' + CONFIG.humanName : '🤖 ' + CONFIG.agentName);
   const toggleAssignee = task.assignee === 'human' ? 'agent' : 'human';
-  const assigneeBadge = `<span class="badge" style="background:${task.assignee==='human'?'#3d2a0f':'#2a1a2e'};color:${task.assignee==='human'?'#f78166':'#bc8cff'};cursor:pointer" onclick="updateTask(${task.id},{assignee:'${toggleAssignee}'})" title="Click to reassign">${assigneeLabel}</span>`;
+  const assigneeBadge = `<span class="badge" style="background:${isInReview?'#3d2a0f':task.assignee==='human'?'#3d2a0f':'#2a1a2e'};color:${isInReview?'#d29922':task.assignee==='human'?'#f78166':'#bc8cff'};cursor:pointer" onclick="updateTask(${task.id},{assignee:'${toggleAssignee}'})" title="${isInReview ? 'This ticket is waiting for your review. Click to reassign.' : 'Click to reassign'}">${assigneeLabel}</span>`;
 
   const taskId = `#${task.id}`;
   const projectRef = task.project_ref || '';
@@ -819,7 +847,7 @@ function renderCard(task, showActions) {
     ${task.parent_id ? `<div style="font-size:11px;margin-bottom:4px;padding:3px 8px;background:rgba(88,166,255,0.1);border-left:2px solid #58a6ff;border-radius:0 4px 4px 0;">↳ subtask of <span class="task-id" onclick="copyId('#${task.parent_id}',this)" style="font-size:10px">#${task.parent_id}</span></div>` : ''}
     ${projectRef ? `<div style="font-size:11px;color:#58a6ff;margin-bottom:4px;">📂 ${projectRef}</div>` : ''}
     ${task.description ? `<div class="card-desc">${task.description}</div>` : ''}
-    <div class="card-meta">${assigneeBadge} ${ticketTypeBadge(task)} ${prioLabel} ${reviewBadge} ${!task.drive_link && task.status !== 'routine' && task.status !== 'archived' ? '<span class="badge" style="background:#3d2a0f;color:#d29922;" title="Missing Drive link (Golden Rule #7)">⚠️ No Drive</span>' : ''} ${(() => {
+    <div class="card-meta">${assigneeBadge} ${ticketTypeBadge(task)} ${deliverableBadge} ${prioLabel} ${reviewBadge} ${!task.drive_link && task.status !== 'routine' && task.status !== 'archived' ? '<span class="badge" style="background:#3d2a0f;color:#d29922;" title="Sin archivo en Drive — Ronald no puede verlo desde el teléfono (Golden Rule #7)">⚠️ No Drive</span>' : ''} ${(() => {
       if (!task.due_date) return '';
       const due = new Date(task.due_date + 'T23:59:59');
       const now = new Date();
