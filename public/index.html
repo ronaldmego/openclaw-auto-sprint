@@ -201,14 +201,13 @@
 
 <div class="tabs">
   <button class="tab active" data-tab="board">📋 Board</button>
+  <button class="tab" data-tab="runs">⚡ Runs</button>
   <button class="tab" data-tab="log">📡 Activity</button>
   <button class="tab" data-tab="docs">📖 Docs</button>
   <button class="tab" data-tab="ideas">💡 Ideas</button>
   <button class="tab" data-tab="tools">🧰 Tools</button>
   <button class="tab" data-tab="brain">🧠 Brain</button>
-  <button class="tab" data-tab="runs">⚡ Runs</button>
   <button class="tab" data-tab="schedule">📅 Schedule</button>
-  <button class="tab" data-tab="analytics" style="color:#484f58;font-size:12px;">📊 Analytics</button>
 </div>
 
 <!-- Tab: Board -->
@@ -342,23 +341,6 @@
   <iframe src="/calendar.html" style="width:100%;height:calc(100vh - 140px);border:none;border-radius:8px;"></iframe>
 </div>
 
-<!-- Tab: Analytics -->
-<div class="tab-content" id="tab-analytics">
-  <div class="section">
-    <div class="section-title">📊 Task Performance Metrics</div>
-    <div class="stats" id="aging-stats" style="margin-bottom: 16px;">
-      <!-- Aging stats will be loaded here -->
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">⚠️ Tasks Needing Attention</div>
-    <div class="cards" id="stale-tasks">
-      <!-- Stale tasks will be loaded here -->
-    </div>
-  </div>
-</div>
-
 <!-- Tab: Activity Log -->
 <div class="tab-content" id="tab-log">
   <div style="padding: 12px 0;">
@@ -476,10 +458,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
 
-    // Load analytics when analytics tab is clicked
-    if (tab.dataset.tab === 'analytics') {
-      loadAnalytics();
-    }
     if (tab.dataset.tab === 'tools') {
       loadTools();
     }
@@ -1008,11 +986,6 @@ async function load() {
     fetch(API+'/stats').then(r=>r.json()),
     fetch(API+'/activity?limit=50').then(r=>r.json())
   ]);
-
-  // Also load analytics if that tab is active or will be loaded later
-  if (document.querySelector('.tab[data-tab="analytics"]')) {
-    loadAnalytics();
-  }
 
   // Stats
   document.getElementById('stats').innerHTML = `
