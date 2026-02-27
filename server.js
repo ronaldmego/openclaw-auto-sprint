@@ -15,6 +15,7 @@ const DEFAULT_ASSIGNEE = process.env.OCC_DEFAULT_ASSIGNEE || 'agent';
 const DEFAULT_AUTHOR = process.env.OCC_DEFAULT_AUTHOR || 'Human';
 const DB_FILE = path.join(__dirname, 'data', 'tasks.json');
 const LOG_FILE = path.join(__dirname, 'data', 'activity.json');
+const WORKER_RUNS_FILE = path.join(__dirname, 'data', 'worker-runs.jsonl');
 
 // Simple JSON "database"
 function loadDB() {
@@ -27,6 +28,12 @@ function loadDB() {
     const maxIdeaId = data.ideas.reduce((m, i) => Math.max(m, i.id || 0), 0);
     const maxId = Math.max(maxTaskId, maxIdeaId);
     if (data.nextId <= maxId) data.nextId = maxId + 1;
+    // Migrate: add ticket_type if missing
+    for (const t of data.tasks) {
+      if (!t.ticket_type) {
+        t.ticket_type = ['agent', 'pepa'].includes(t.assignee) ? 'auto' : 'manual';
+      }
+    }
     return data;
   }
   catch { return { tasks: [], ideas: [], nextId: 1 }; }
@@ -197,7 +204,7 @@ app.get('/api/tasks', (req, res) => {
 // API: Create task
 app.post('/api/tasks', (req, res) => {
   const db = loadDB();
-  const { title, description, deliverable_type, deliverable_url, priority, assignee, drive_link, github_link, project_ref, parent_id, due_date, status } = req.body;
+  const { title, description, deliverable_type, deliverable_url, priority, assignee, drive_link, github_link, project_ref, parent_id, due_date, status, ticket_type } = req.body;
   const validStatuses = ['todo', 'doing', 'done', 'routine'];
   const task = {
     id: db.nextId++,
@@ -217,7 +224,8 @@ app.post('/api/tasks', (req, res) => {
     updated_at: new Date().toISOString(),
     completed_at: null,
     reviewed_by_owner: false,
-    review_action: null
+    review_action: null,
+    ticket_type: ['auto', 'manual'].includes(ticket_type) ? ticket_type : (['agent', 'pepa'].includes(assignee || DEFAULT_ASSIGNEE) ? 'auto' : 'manual')
   };
   db.tasks.push(task);
   saveDB(db);
@@ -551,6 +559,40 @@ app.get('/api/crons', (req, res) => {
       res.status(500).json({ error: 'Failed to parse cron data', details: parseError.message });
     }
   });
+});
+
+// API: Worker Runs (POST to log, GET to list)
+app.post('/api/worker-runs', (req, res) => {
+  const { worker, ticket_id, model, tokens_in, tokens_out, cost_usd, duration_s, status } = req.body;
+  if (!worker) return res.status(400).json({ error: 'worker field required' });
+  const entry = {
+    worker,
+    ticket_id: ticket_id || null,
+    model: model || null,
+    tokens_in: tokens_in || 0,
+    tokens_out: tokens_out || 0,
+    cost_usd: cost_usd || 0,
+    duration_s: duration_s || 0,
+    status: status || 'ok',
+    timestamp: new Date().toISOString()
+  };
+  fs.mkdirSync(path.dirname(WORKER_RUNS_FILE), { recursive: true });
+  fs.appendFileSync(WORKER_RUNS_FILE, JSON.stringify(entry) + '\n');
+  addLog('worker_run', `[${worker}] ${status || 'ok'} — ${model || 'unknown'} (${duration_s || 0}s)`);
+  res.json(entry);
+});
+
+app.get('/api/worker-runs', (req, res) => {
+  const limit = parseInt(req.query.limit) || 100;
+  try {
+    const lines = fs.readFileSync(WORKER_RUNS_FILE, 'utf8').trim().split('\n').filter(Boolean);
+    const entries = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    // Return newest first
+    entries.reverse();
+    res.json(entries.slice(0, limit));
+  } catch {
+    res.json([]);
+  }
 });
 
 // Initialize data directory and files on startup

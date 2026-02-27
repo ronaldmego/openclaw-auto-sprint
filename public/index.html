@@ -206,6 +206,7 @@
   <button class="tab" data-tab="ideas">💡 Ideas</button>
   <button class="tab" data-tab="tools">🧰 Tools</button>
   <button class="tab" data-tab="brain">🧠 Brain</button>
+  <button class="tab" data-tab="runs">⚡ Runs</button>
   <button class="tab" data-tab="schedule">📅 Schedule</button>
   <button class="tab" data-tab="analytics" style="color:#484f58;font-size:12px;">📊 Analytics</button>
 </div>
@@ -248,6 +249,11 @@
       <option value="done">✅ Done</option>
       <option value="routine">🔄 Routine</option>
     </select>
+    <select id="filter-ticket-type" onchange="applyAdvancedFilters()">
+      <option value="">All types</option>
+      <option value="auto">⚡ Auto</option>
+      <option value="manual">🔧 Manual</option>
+    </select>
     <button class="clear-filters" onclick="clearAdvancedFilters()">Clear</button>
   </div>
 
@@ -258,6 +264,7 @@
         <input type="text" id="f-title" placeholder="Task title">
         <select id="f-assignee"></select>
         <select id="f-priority"><option value="normal">Normal</option><option value="high">🔴 High</option></select>
+        <select id="f-ticket-type"><option value="auto">⚡ Auto</option><option value="manual">🔧 Manual</option></select>
       </div>
       <div class="form-row">
         <textarea id="f-desc" placeholder="Description"></textarea>
@@ -301,6 +308,32 @@
       <summary class="closed-toggle">✅ Closed <span id="closed-count" style="font-size:11px;color:#8b949e;margin-left:4px;"></span></summary>
       <div class="cards" id="cards-closed" style="padding:8px 0;"></div>
     </details>
+  </div>
+</div>
+
+<!-- Tab: Runs -->
+<div class="tab-content" id="tab-runs">
+  <div class="section">
+    <div class="section-title">⚡ Worker Runs <span class="count" id="runs-count"></span></div>
+    <div id="runs-stats" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
+    <div id="runs-container" style="overflow-x:auto;">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;background:#161b22;border:1px solid #30363d;border-radius:8px;">
+        <thead>
+          <tr style="border-bottom:1px solid #30363d;">
+            <th style="text-align:left;padding:8px;color:#8b949e;">Time</th>
+            <th style="text-align:left;padding:8px;color:#8b949e;">Worker</th>
+            <th style="text-align:left;padding:8px;color:#8b949e;">Ticket</th>
+            <th style="text-align:left;padding:8px;color:#8b949e;">Model</th>
+            <th style="text-align:right;padding:8px;color:#8b949e;">Tokens In</th>
+            <th style="text-align:right;padding:8px;color:#8b949e;">Tokens Out</th>
+            <th style="text-align:right;padding:8px;color:#8b949e;">Cost</th>
+            <th style="text-align:right;padding:8px;color:#8b949e;">Duration</th>
+            <th style="text-align:center;padding:8px;color:#8b949e;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="runs-tbody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -458,6 +491,9 @@ document.querySelectorAll('.tab').forEach(tab => {
     }
     if (tab.dataset.tab === 'ideas') {
       loadIdeas();
+    }
+    if (tab.dataset.tab === 'runs') {
+      loadRuns();
     }
   });
 });
@@ -719,47 +755,14 @@ function catBadge(cat) {
   return `<span class="badge ${cls}">${label}</span>`;
 }
 
-function deliverableTypeDropdown(task) {
-  const options = [
-    { value: 'research', label: '🔍 Research — Investigación, auditorías' },
-    { value: 'code', label: '💻 Code — Desarrollo, código' },
-    { value: 'pr', label: '🔀 Pull Request' },
-    { value: 'feature', label: '✨ Feature — Feature nueva' },
-    { value: 'config', label: '⚙️ Config — Configuración, setup' },
-    { value: 'ops', label: '🔧 Ops — Operaciones' },
-    { value: 'report', label: '📊 Report — Reportes automáticos' },
-    { value: 'content', label: '⚠️ 📝 Content — HEAVY — Blog posts, contenido largo', heavy: true },
-    { value: 'draft', label: '⚠️ ✏️ Draft — HEAVY — Borradores largos', heavy: true },
-    { value: 'strategy', label: '⚠️ 🗺️ Strategy — HEAVY — Roadmaps, planificación', heavy: true },
-    { value: 'routine', label: '🔄 Routine — Rutinas/crons' },
-    { value: 'other', label: '📌 Other — Sin clasificar' }
-  ];
-  
-  const currentType = task.deliverable_type || 'other';
-  const currentOption = options.find(opt => opt.value === currentType) || options.find(opt => opt.value === 'other');
-  
-  const dropdownId = `deliverable-type-${task.id}`;
-  
-  return `
-    <select id="${dropdownId}" 
-            class="deliverable-type-dropdown" 
-            style="background: ${currentOption.heavy ? '#3d2a0f' : '#161b22'}; 
-                   border: 1px solid #30363d; 
-                   color: ${currentOption.heavy ? '#d29922' : '#c9d1d9'}; 
-                   padding: 2px 6px; 
-                   border-radius: 4px; 
-                   font-size: 10px; 
-                   cursor: pointer;"
-            onchange="updateDeliverableType(${task.id}, this.value)">
-      ${options.map(opt => `
-        <option value="${opt.value}" 
-                ${opt.value === currentType ? 'selected' : ''}
-                style="background: ${opt.heavy ? '#3d2a0f' : '#161b22'}; color: ${opt.heavy ? '#d29922' : '#c9d1d9'};">
-          ${opt.label}
-        </option>
-      `).join('')}
-    </select>
-  `;
+function ticketTypeBadge(task) {
+  const isAuto = task.ticket_type === 'auto';
+  const bg = isAuto ? '#1f3d2a' : '#3d2a0f';
+  const color = isAuto ? '#3fb950' : '#d29922';
+  const icon = isAuto ? '⚡' : '🔧';
+  const label = isAuto ? 'AUTO' : 'MANUAL';
+  const toggle = isAuto ? 'manual' : 'auto';
+  return `<span class="badge" style="background:${bg};color:${color};cursor:pointer;font-size:10px;" onclick="updateTask(${task.id},{ticket_type:'${toggle}'})" title="Click to toggle AUTO/MANUAL">${icon} ${label}</span>`;
 }
 
 function renderCard(task, showActions) {
@@ -838,7 +841,7 @@ function renderCard(task, showActions) {
     ${task.parent_id ? `<div style="font-size:11px;margin-bottom:4px;padding:3px 8px;background:rgba(88,166,255,0.1);border-left:2px solid #58a6ff;border-radius:0 4px 4px 0;">↳ subtask of <span class="task-id" onclick="copyId('#${task.parent_id}',this)" style="font-size:10px">#${task.parent_id}</span></div>` : ''}
     ${projectRef ? `<div style="font-size:11px;color:#58a6ff;margin-bottom:4px;">📂 ${projectRef}</div>` : ''}
     ${task.description ? `<div class="card-desc">${task.description}</div>` : ''}
-    <div class="card-meta">${assigneeBadge} ${deliverableTypeDropdown(task)} ${prioLabel} ${reviewBadge} ${!task.drive_link && task.status !== 'routine' && task.status !== 'archived' ? '<span class="badge" style="background:#3d2a0f;color:#d29922;" title="Missing Drive link (Golden Rule #7)">⚠️ No Drive</span>' : ''} ${(() => {
+    <div class="card-meta">${assigneeBadge} ${ticketTypeBadge(task)} ${prioLabel} ${reviewBadge} ${!task.drive_link && task.status !== 'routine' && task.status !== 'archived' ? '<span class="badge" style="background:#3d2a0f;color:#d29922;" title="Missing Drive link (Golden Rule #7)">⚠️ No Drive</span>' : ''} ${(() => {
       if (!task.due_date) return '';
       const due = new Date(task.due_date + 'T23:59:59');
       const now = new Date();
@@ -1056,6 +1059,7 @@ async function addTask() {
       github_link: document.getElementById('f-github').value.trim() || null,
       project_ref: document.getElementById('f-project').value.trim() || null,
       due_date: document.getElementById('f-due').value || null,
+      ticket_type: document.getElementById('f-ticket-type').value || 'auto',
     })
   });
   document.getElementById('f-title').value = '';
@@ -1072,29 +1076,7 @@ async function updateTask(id, fields) {
   window.scrollTo(0, scrollY);
 }
 
-async function updateDeliverableType(taskId, newType) {
-  try {
-    const scrollY = window.scrollY;
-    const response = await fetch(API + '/tasks/' + taskId, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deliverable_type: newType })
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to update deliverable type');
-    }
-    
-    // Reload to refresh the UI
-    await load();
-    window.scrollTo(0, scrollY);
-  } catch (error) {
-    console.error('Error updating deliverable type:', error);
-    // Show error to user and revert dropdown
-    alert('Error updating deliverable type. Please try again.');
-    await load(); // Reload to reset dropdown to original value
-  }
-}
+// updateDeliverableType removed - replaced by ticket_type badge toggle
 
 async function addComment(taskId) {
   const input = document.getElementById('comment-' + taskId);
@@ -1177,6 +1159,7 @@ function applyAdvancedFilters() {
   const priority = document.getElementById('filter-priority').value;
   const type = document.getElementById('filter-type').value;
   const status = document.getElementById('filter-status').value;
+  const ticketType = document.getElementById('filter-ticket-type').value;
 
   if (!window._allTasks) return;
 
@@ -1184,6 +1167,7 @@ function applyAdvancedFilters() {
     if (priority && task.priority !== priority) return false;
     if (type && task.deliverable_type !== type) return false;
     if (status && task.status !== status) return false;
+    if (ticketType && task.ticket_type !== ticketType) return false;
     return true;
   });
 
@@ -1194,6 +1178,7 @@ function clearAdvancedFilters() {
   document.getElementById('filter-priority').value = '';
   document.getElementById('filter-type').value = '';
   document.getElementById('filter-status').value = '';
+  document.getElementById('filter-ticket-type').value = '';
 
   if (window._allTasks) {
     renderBoard(window._allTasks);
@@ -1443,6 +1428,68 @@ function markDone(id, missingDrive) {
     if (!confirm('⚠️ No Drive link.\n\nGolden Rule #7: dual delivery (workspace + Drive).\n\nMark as done anyway?')) return;
   }
   updateTask(id, {status:'done'});
+}
+
+let runsLoaded = false;
+async function loadRuns() {
+  try {
+    const runs = await fetch(API + '/worker-runs?limit=100').then(r => r.json());
+    const tbody = document.getElementById('runs-tbody');
+    const statsDiv = document.getElementById('runs-stats');
+    const countEl = document.getElementById('runs-count');
+    
+    countEl.textContent = `(${runs.length})`;
+
+    // Calculate daily/weekly totals
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const weekAgo = new Date(now - 7*24*60*60*1000).toISOString();
+    
+    const todayRuns = runs.filter(r => r.timestamp && r.timestamp.slice(0, 10) === today);
+    const weekRuns = runs.filter(r => r.timestamp && r.timestamp >= weekAgo);
+    
+    const todayCost = todayRuns.reduce((s, r) => s + (r.cost_usd || 0), 0);
+    const weekCost = weekRuns.reduce((s, r) => s + (r.cost_usd || 0), 0);
+    const todayTokens = todayRuns.reduce((s, r) => s + (r.tokens_in || 0) + (r.tokens_out || 0), 0);
+    const weekTokens = weekRuns.reduce((s, r) => s + (r.tokens_in || 0) + (r.tokens_out || 0), 0);
+    const successRate = runs.length ? Math.round(runs.filter(r => r.status === 'ok').length / runs.length * 100) : 0;
+
+    statsDiv.innerHTML = `
+      <div class="stat"><div class="num" style="color:#3fb950">${todayRuns.length}</div><div class="label">Today Runs</div></div>
+      <div class="stat"><div class="num" style="color:#d29922">$${todayCost.toFixed(3)}</div><div class="label">Today Cost</div></div>
+      <div class="stat"><div class="num" style="color:#58a6ff">${weekRuns.length}</div><div class="label">Week Runs</div></div>
+      <div class="stat"><div class="num" style="color:#d29922">$${weekCost.toFixed(3)}</div><div class="label">Week Cost</div></div>
+      <div class="stat"><div class="num" style="color:#bc8cff">${(weekTokens/1000).toFixed(1)}K</div><div class="label">Week Tokens</div></div>
+      <div class="stat"><div class="num" style="color:${successRate>=80?'#3fb950':'#f85149'}">${successRate}%</div><div class="label">Success Rate</div></div>
+    `;
+
+    if (runs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#484f58;">No worker runs yet. Crons will log here when they execute.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = runs.map(r => {
+      const time = r.timestamp ? new Date(r.timestamp).toLocaleString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+      const statusColor = r.status === 'ok' ? '#3fb950' : '#f85149';
+      const modelShort = (r.model || '-').replace('google/', '').replace('anthropic/', '').replace('openai/', '');
+      return `<tr style="border-bottom:1px solid #21262d;">
+        <td style="padding:6px 8px;color:#8b949e;font-size:11px;">${time}</td>
+        <td style="padding:6px 8px;color:#f0f6fc;">${r.worker || '-'}</td>
+        <td style="padding:6px 8px;color:#58a6ff;">${r.ticket_id ? '#'+r.ticket_id : '-'}</td>
+        <td style="padding:6px 8px;color:#bc8cff;font-size:11px;">${modelShort}</td>
+        <td style="padding:6px 8px;text-align:right;color:#8b949e;">${(r.tokens_in||0).toLocaleString()}</td>
+        <td style="padding:6px 8px;text-align:right;color:#8b949e;">${(r.tokens_out||0).toLocaleString()}</td>
+        <td style="padding:6px 8px;text-align:right;color:#d29922;">$${(r.cost_usd||0).toFixed(4)}</td>
+        <td style="padding:6px 8px;text-align:right;color:#8b949e;">${r.duration_s||0}s</td>
+        <td style="padding:6px 8px;text-align:center;color:${statusColor};">${r.status === 'ok' ? '✅' : '❌'} ${r.status||'-'}</td>
+      </tr>`;
+    }).join('');
+    
+    runsLoaded = true;
+  } catch (error) {
+    console.error('Failed to load runs:', error);
+    document.getElementById('runs-tbody').innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#f85149;">Error loading worker runs</td></tr>';
+  }
 }
 
 loadConfig().then(() => load());
