@@ -95,23 +95,6 @@
   .comment-toggle { font-size: 11px; color: #8b949e; cursor: pointer; margin-top: 6px; }
   .comment-toggle:hover { color: #58a6ff; }
 
-  /* Deliverable Type Dropdown */
-  .deliverable-type-dropdown { 
-    font-family: inherit; 
-    font-weight: 600; 
-    transition: all 0.2s ease; 
-    max-width: 200px;
-  }
-  .deliverable-type-dropdown:hover { 
-    border-color: #58a6ff; 
-    box-shadow: 0 0 0 1px rgba(88,166,255,0.3); 
-  }
-  .deliverable-type-dropdown:focus { 
-    outline: none; 
-    border-color: #58a6ff; 
-    box-shadow: 0 0 0 2px rgba(88,166,255,0.3); 
-  }
-
   /* Activity log */
   .activity-log { max-height: 250px; overflow-y: auto; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-family: monospace; margin: 0 20px 12px; }
 
@@ -607,53 +590,6 @@ function renderToolsMd(md) {
   return html;
 }
 
-// Load Golden Rules
-(async function loadReglas() {
-  try {
-    const res = await fetch(API + '/reglas');
-    const { content } = await res.json();
-    const el = document.getElementById('reglas-content');
-    el.innerHTML = renderReglasMd(content);
-  } catch(e) { console.error('Failed to load reglas', e); }
-})();
-
-function renderReglasMd(md) {
-  let html = '';
-  const sections = md.split(/^---$/m);
-
-  for (const section of sections) {
-    const lines = section.trim().split('\n');
-    let sectionHtml = '';
-    let inList = false;
-    let inCode = false;
-
-    for (const line of lines) {
-      if (line.startsWith('```')) {
-        if (!inCode) { sectionHtml += '<div style="background:#0d1117;padding:10px;border-radius:6px;margin:8px 0;font-family:monospace;font-size:12px;">'; inCode = true; }
-        else { sectionHtml += '</div>'; inCode = false; }
-        continue;
-      }
-      if (inCode) { sectionHtml += line + '<br>'; continue; }
-      if (line.startsWith('# ')) { sectionHtml += `<h2 style="color:#d29922;font-size:16px;margin-bottom:12px;">${line.replace('# ','')}</h2>`; continue; }
-      if (line.startsWith('## ')) { sectionHtml += `<h2 style="color:#58a6ff;font-size:16px;margin:16px 0 8px;">${line.replace('## ','')}</h2>`; continue; }
-      if (line.startsWith('- ')) {
-        if (!inList) { sectionHtml += '<ul style="margin-left:20px;color:#8b949e;">'; inList = true; }
-        sectionHtml += `<li>${line.replace('- ','').replace(/\*\*(.*?)\*\*/g,'<strong style="color:#f0f6fc;">$1</strong>')}</li>`;
-        continue;
-      }
-      if (inList && !line.startsWith('- ')) { sectionHtml += '</ul>'; inList = false; }
-      if (line.trim() === '') continue;
-      const rendered = line.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`(.*?)`/g,'<code style="background:#0d1117;padding:2px 6px;border-radius:3px;font-size:12px;">$1</code>');
-      sectionHtml += `<p style="margin:6px 0;">${rendered}</p>`;
-    }
-    if (inList) sectionHtml += '</ul>';
-    if (sectionHtml.trim()) {
-      html += `<div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px;">${sectionHtml}</div>`;
-    }
-  }
-  return html;
-}
-
 let brainLoaded = false;
 async function loadBrain() {
   const el = document.getElementById('brain-content');
@@ -913,7 +849,7 @@ function setFilter(f) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('filter-' + f).classList.add('active');
-  if (window._allTasks) renderBoard(window._allTasks);
+  applyFilters();
 }
 
 function renderBoard(tasks) {
@@ -1009,11 +945,20 @@ async function load() {
     }
   });
 
-  const [tasks, stats, activity] = await Promise.all([
-    fetch(API+'/tasks').then(r=>r.json()),
-    fetch(API+'/stats').then(r=>r.json()),
-    fetch(API+'/activity?limit=50').then(r=>r.json())
-  ]);
+  let tasks, stats, activity;
+  try {
+    [tasks, stats, activity] = await Promise.all([
+      fetch(API+'/tasks').then(r => { if (!r.ok) throw new Error('tasks: ' + r.status); return r.json(); }),
+      fetch(API+'/stats').then(r => { if (!r.ok) throw new Error('stats: ' + r.status); return r.json(); }),
+      fetch(API+'/activity?limit=50').then(r => { if (!r.ok) throw new Error('activity: ' + r.status); return r.json(); })
+    ]);
+  } catch (err) {
+    console.error('Failed to load:', err);
+    document.getElementById('last-pulse').textContent = '⚠ Connection error — ' + err.message;
+    document.getElementById('last-pulse').style.color = '#f85149';
+    return;
+  }
+  document.getElementById('last-pulse').style.color = '';
 
   // Stats
   document.getElementById('stats').innerHTML = `
@@ -1101,11 +1046,13 @@ async function searchMemory() {
   const div = document.getElementById('search-results');
   if (!q) { div.style.display = 'none'; return; }
 
+  // Fetch all tasks once for both ID and text search
+  const allTasks = await fetch(API+'/tasks?include_all=true').then(r=>r.json());
+
   // Search by task ID (e.g. #93, 93)
   const idMatch = q.match(/^#?(\d+)$/);
   if (idMatch) {
     const taskId = parseInt(idMatch[1]);
-    const allTasks = await fetch(API+'/tasks?include_all=true').then(r=>r.json());
     const found = allTasks.filter(t => t.id === taskId);
     div.style.display = 'block';
     if (found.length) {
@@ -1117,7 +1064,6 @@ async function searchMemory() {
   }
 
   // Text search across all tasks
-  const allTasks = await fetch(API+'/tasks?include_all=true').then(r=>r.json());
   const lower = q.toLowerCase();
   const taskResults = allTasks.filter(t =>
     (t.title && t.title.toLowerCase().includes(lower)) ||
@@ -1155,16 +1101,17 @@ async function updatePulse() {
   }
 }
 
-// Advanced Filters
-function applyAdvancedFilters() {
+// Unified filter — composes assignee quick-filter with advanced dropdowns
+function applyFilters() {
+  if (!window._allTasks) return;
+
   const priority = document.getElementById('filter-priority').value;
   const type = document.getElementById('filter-type').value;
   const status = document.getElementById('filter-status').value;
   const ticketType = document.getElementById('filter-ticket-type').value;
 
-  if (!window._allTasks) return;
-
   let filtered = window._allTasks.filter(task => {
+    if (currentFilter !== 'all' && task.assignee !== currentFilter) return false;
     if (priority && task.priority !== priority) return false;
     if (type && task.deliverable_type !== type) return false;
     if (status && task.status !== status) return false;
@@ -1175,15 +1122,15 @@ function applyAdvancedFilters() {
   renderBoard(filtered);
 }
 
+// Keep backward compat for inline onchange calls
+function applyAdvancedFilters() { applyFilters(); }
+
 function clearAdvancedFilters() {
   document.getElementById('filter-priority').value = '';
   document.getElementById('filter-type').value = '';
   document.getElementById('filter-status').value = '';
   document.getElementById('filter-ticket-type').value = '';
-
-  if (window._allTasks) {
-    renderBoard(window._allTasks);
-  }
+  applyFilters();
 }
 
 // Ideas functionality
@@ -1433,6 +1380,7 @@ function markDone(id, missingDrive) {
 
 let runsLoaded = false;
 async function loadRuns() {
+  if (runsLoaded) return;
   try {
     const runs = await fetch(API + '/worker-runs?limit=100').then(r => r.json());
     const tbody = document.getElementById('runs-tbody');

@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { exec } = require('child_process');
 
 try { require('dotenv').config(); } catch {}
 
@@ -17,23 +18,23 @@ const DB_FILE = path.join(__dirname, 'data', 'tasks.json');
 const LOG_FILE = path.join(__dirname, 'data', 'activity.json');
 const WORKER_RUNS_FILE = path.join(__dirname, 'data', 'worker-runs.jsonl');
 
+// Write mutex — prevents race conditions on concurrent writes
+let writeQueue = Promise.resolve();
+function withWriteLock(fn) {
+  const next = writeQueue.then(fn);
+  writeQueue = next.catch(() => {});
+  return next;
+}
+
 // Simple JSON "database"
 function loadDB() {
   try {
     const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-    // Ensure ideas array exists
     if (!data.ideas) data.ideas = [];
-    // Fix nextId to always be above max existing id (including ideas)
     const maxTaskId = data.tasks.reduce((m, t) => Math.max(m, t.id || 0), 0);
     const maxIdeaId = data.ideas.reduce((m, i) => Math.max(m, i.id || 0), 0);
     const maxId = Math.max(maxTaskId, maxIdeaId);
     if (data.nextId <= maxId) data.nextId = maxId + 1;
-    // Migrate: add ticket_type if missing
-    for (const t of data.tasks) {
-      if (!t.ticket_type) {
-        t.ticket_type = ['agent', 'pepa'].includes(t.assignee) ? 'auto' : 'manual';
-      }
-    }
     return data;
   }
   catch { return { tasks: [], ideas: [], nextId: 1 }; }
@@ -241,8 +242,15 @@ app.patch('/api/tasks/:id', (req, res) => {
   if (!task) return res.status(404).json({ error: 'not found' });
 
   const allowed = ['title', 'description', 'deliverable_type', 'deliverable_url', 'status', 'priority', 'reviewed_by_owner', 'assignee', 'drive_link', 'github_link', 'project_ref', 'parent_id', 'due_date', 'blocked_by', 'ticket_type', 'review_action'];
+  const validStatuses = ['todo', 'doing', 'done', 'routine', 'archived'];
+  const validPriorities = ['low', 'normal', 'high', 'critical'];
+  const validTicketTypes = ['auto', 'manual'];
   for (const [key, val] of Object.entries(req.body)) {
-    if (allowed.includes(key)) task[key] = val;
+    if (!allowed.includes(key)) continue;
+    if (key === 'status' && !validStatuses.includes(val)) continue;
+    if (key === 'priority' && !validPriorities.includes(val)) continue;
+    if (key === 'ticket_type' && !validTicketTypes.includes(val)) continue;
+    task[key] = val;
   }
   if (!task.comments) task.comments = [];
   if (req.body.status === 'done' && !task.completed_at) {
@@ -291,8 +299,12 @@ app.delete('/api/tasks/:id/comments/:commentId', (req, res) => {
 // API: Delete task
 app.delete('/api/tasks/:id', (req, res) => {
   const db = loadDB();
-  db.tasks = db.tasks.filter(t => t.id !== parseInt(req.params.id));
+  const id = parseInt(req.params.id);
+  const task = db.tasks.find(t => t.id === id);
+  if (!task) return res.status(404).json({ error: 'not found' });
+  db.tasks = db.tasks.filter(t => t.id !== id);
   saveDB(db);
+  addLog('task_deleted', `#${id} ${task.title}`);
   res.json({ ok: true });
 });
 
@@ -384,11 +396,12 @@ app.post('/api/ideas/:id/promote', (req, res) => {
     updated_at: new Date().toISOString(),
     completed_at: null,
     reviewed_by_owner: false,
-    review_action: null
+    review_action: null,
+    ticket_type: ['agent', 'pepa'].includes(assignee || DEFAULT_ASSIGNEE) ? 'auto' : 'manual'
   };
 
   db.tasks.push(task);
-  
+
   // Mark idea as promoted
   idea.promoted_to = task.id;
   idea.status = 'promovida';
@@ -544,8 +557,7 @@ app.get('/api/logs', (req, res) => {
 
 // API: Get crons from OpenClaw Gateway
 app.get('/api/crons', (req, res) => {
-  const { exec } = require('child_process');
-  exec('openclaw cron list --json', (error, stdout, stderr) => {
+  exec('openclaw cron list --json', { timeout: 10000 }, (error, stdout, stderr) => {
     if (error) {
       console.error('Error fetching crons:', error);
       res.status(500).json({ error: 'Failed to fetch cron jobs', details: error.message });
@@ -597,20 +609,31 @@ app.get('/api/worker-runs', (req, res) => {
 
 // Initialize data directory and files on startup
 function initializeData() {
-  // Ensure data directory exists
   const dataDir = path.dirname(DB_FILE);
   const logsDir = path.join(__dirname, 'data', 'logs');
   fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(logsDir, { recursive: true });
-  
-  // Initialize empty database if it doesn't exist
+
   if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(DB_FILE, JSON.stringify({ tasks: [], ideas: [], nextId: 1 }, null, 2));
   }
-  
-  // Initialize empty activity log if it doesn't exist
+
   if (!fs.existsSync(LOG_FILE)) {
     fs.writeFileSync(LOG_FILE, JSON.stringify([], null, 2));
+  }
+
+  // One-time migration: add ticket_type if missing
+  const db = loadDB();
+  let migrated = false;
+  for (const t of db.tasks) {
+    if (!t.ticket_type) {
+      t.ticket_type = ['agent', 'pepa'].includes(t.assignee) ? 'auto' : 'manual';
+      migrated = true;
+    }
+  }
+  if (migrated) {
+    saveDB(db);
+    console.log('Migration complete: ticket_type added to all tasks');
   }
 }
 
