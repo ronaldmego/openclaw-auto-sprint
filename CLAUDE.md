@@ -230,7 +230,7 @@ curl -X POST http://100.64.216.28:3401/api/worker-runs \
 
 ### Key UI patterns
 - **Badges son clickeables:** priority cycle, assignee toggle, ticket_type toggle
-- **No React, no build step:** Vanilla JS, todo en un solo HTML
+- **Vanilla JS** — sin framework, sin build step
 - **Auto-refresh:** cada 30 segundos
 
 ---
@@ -275,14 +275,24 @@ curl -s http://100.64.216.28:3401/api/worker-runs?limit=10 | python3 -m json.too
 
 ## Convenciones de Desarrollo
 
-- **Zero build step** — No webpack, no React, no TS. Vanilla JS.
-- **Single-file UI** — Todo en `public/index.html`. Simplicity > architecture.
-- **JSON/JSONL storage** — No database. Copy folder = copy state.
+### Arquitectura Frontend
+- **Vanilla JS** — No frameworks (React, Vue, etc.). No TypeScript. No build step.
+- **Separación de concerns** — CSS en archivos `.css`, JS en archivos `.js`, HTML limpio. No monolitos single-file.
+- **Modular** — Funciones y componentes aislados, reutilizables. Si un archivo supera ~300 líneas, refactorizar.
+- **Escalable** — Cada decisión debe funcionar igual de bien con 10 features que con 100. No shortcuts que se vuelvan deuda.
+
+### Arquitectura Backend
 - **Express only** — Minimal deps.
+- **JSON/JSONL storage** — No database. Copy folder = copy state.
+
+### Código
 - **Naming:** camelCase (vars/functions), `/api/kebab-case` (routes), kebab-case (files)
 - **PRs obligatorios** — branch `feat/xxx-N` o `fix/xxx-N`, PR con `Closes #N`
 - **Golden Rules en markdown** — Nunca hardcodear reglas en HTML. Leer de workspace.
 - **`ticket_type` reemplaza `deliverable_type` en UI** — `deliverable_type` se mantiene en schema por backward compat pero NO se muestra en la interfaz.
+
+### ⚠️ Deuda técnica conocida
+- `public/index.html` (~1500 líneas) — Monolito que mezcla HTML, CSS y JS. Debe refactorizarse en `index.html` + `styles.css` + `app.js` como mínimo. Issue pendiente.
 
 ---
 
