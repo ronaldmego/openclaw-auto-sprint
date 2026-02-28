@@ -48,12 +48,11 @@ function catBadge(cat) {
 
 function ticketTypeBadge(task) {
   var isAuto = task.ticket_type === 'auto';
-  var bg = isAuto ? '#1f3d2a' : '#3d2a0f';
-  var color = isAuto ? '#3fb950' : '#d29922';
   var icon = isAuto ? '⚡' : '🔧';
   var label = isAuto ? 'AUTO' : 'MANUAL';
   var toggle = isAuto ? 'manual' : 'auto';
-  return '<span class="badge" style="background:' + bg + ';color:' + color + ';cursor:pointer;font-size:10px;" onclick="updateTask(' + task.id + ',{ticket_type:\'' + toggle + '\'})" title="Click to toggle AUTO/MANUAL">' + icon + ' ' + label + '</span>';
+  var badgeClass = isAuto ? 'badge-type-auto' : 'badge-type-manual';
+  return '<span class="badge ' + badgeClass + ' badge-clickable" onclick="updateTask(' + task.id + ',{ticket_type:\'' + toggle + '\'})" title="Click to toggle AUTO/MANUAL">' + icon + ' ' + label + '</span>';
 }
 
 function copyId(text, el) {

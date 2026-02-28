@@ -4,20 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 <title>OAS — OpenClaw Auto Sprint</title>
 </head>
 <body>
 
-<div class="header">
-  <h1><span>OAS</span> — OpenClaw Auto Sprint</h1>
-  <div style="text-align:right">
-    <div id="clock" style="color:#8b949e;font-size:13px"></div>
-    <div id="last-pulse" style="color:#484f58;font-size:11px"></div>
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-icon">O</div>
+    <h1><span>OAS</span> — OpenClaw Auto Sprint</h1>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-meta">
+      <div class="topbar-tz" id="clock"></div>
+      <div class="topbar-updated" id="last-pulse"></div>
+    </div>
+    <div class="status-dot" title="Live"></div>
   </div>
 </div>
 
-<div class="stats" id="stats"></div>
+<div class="stats-strip" id="stats"></div>
 
 <div class="tabs">
   <button class="tab active" data-tab="board">📋 Board</button>
@@ -76,9 +85,9 @@
     <button class="clear-filters" onclick="clearAdvancedFilters()">Clear</button>
   </div>
 
-  <details style="margin: 0 20px 8px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:4px 12px;">
-    <summary style="cursor:pointer;color:#58a6ff;font-size:14px;font-weight:600;padding:8px 0;">➕ New task</summary>
-    <div class="add-form" style="margin-top:8px;">
+  <details class="form-details">
+    <summary>➕ New task</summary>
+    <div class="add-form">
       <div class="form-row">
         <input type="text" id="f-title" placeholder="Task title">
         <select id="f-assignee"></select>
@@ -92,8 +101,8 @@
         <input type="text" id="f-project" placeholder="Project reference (optional)">
       </div>
       <div class="form-row">
-        <label for="f-due" style="color:#8b949e;font-size:12px">📅 Due date</label>
-        <input type="date" id="f-due" style="background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:6px 10px">
+        <label for="f-due" class="form-date-label">📅 Due date</label>
+        <input type="date" id="f-due" class="form-date-input">
       </div>
       <div class="form-row">
         <input type="text" id="f-drive" placeholder="Drive link (optional)">
@@ -105,27 +114,27 @@
 
   <div class="board">
     <div class="column col-todo" id="section-todo">
-      <div class="column-header" onclick="toggleSection('todo')">📋 To Do <span id="count-todo" style="font-size:11px;color:#8b949e;font-weight:400;"></span><span class="collapse-icon" id="icon-todo">▼</span></div>
+      <div class="column-header" onclick="toggleSection('todo')">📋 To Do <span id="count-todo" class="column-count"></span><span class="collapse-icon" id="icon-todo">▼</span></div>
       <div class="cards" id="cards-todo"></div>
     </div>
     <div class="column col-doing" id="section-doing">
-      <div class="column-header" onclick="toggleSection('doing')">⚡ Doing <span id="count-doing" style="font-size:11px;color:#8b949e;font-weight:400;"></span><span class="collapse-icon" id="icon-doing">▼</span></div>
+      <div class="column-header" onclick="toggleSection('doing')">⚡ Doing <span id="count-doing" class="column-count"></span><span class="collapse-icon" id="icon-doing">▼</span></div>
       <div class="cards" id="cards-doing"></div>
     </div>
     <div class="column col-done" id="section-review">
-      <div class="column-header" onclick="toggleSection('review')">👀 Review <span id="count-review" style="font-size:11px;color:#8b949e;font-weight:400;"></span><span class="collapse-icon" id="icon-review">▼</span></div>
+      <div class="column-header" onclick="toggleSection('review')">👀 Review <span id="count-review" class="column-count"></span><span class="collapse-icon" id="icon-review">▼</span></div>
       <div class="cards" id="cards-review"></div>
     </div>
   </div>
-  <div class="routine-section" style="margin:0 20px 12px;" id="section-routine">
-    <div style="font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;color:#d29922;cursor:pointer;user-select:none;" onclick="toggleSection('routine')">🔄 Routines <span id="routine-count" style="font-size:11px;color:#8b949e;font-weight:400;"></span><span class="collapse-icon" id="icon-routine" style="font-size:10px;margin-left:auto;">▼</span></div>
+  <div class="routine-section" id="section-routine">
+    <div class="routine-header" onclick="toggleSection('routine')">🔄 Routines <span id="routine-count" class="column-count"></span><span class="collapse-icon" id="icon-routine">▼</span></div>
     <div class="cards" id="cards-routine"></div>
   </div>
 
   <div class="closed-section">
     <details>
-      <summary class="closed-toggle">✅ Closed <span id="closed-count" style="font-size:11px;color:#8b949e;margin-left:4px;"></span></summary>
-      <div class="cards" id="cards-closed" style="padding:8px 0;"></div>
+      <summary class="closed-toggle">✅ Closed <span id="closed-count" class="column-count"></span></summary>
+      <div class="cards" id="cards-closed"></div>
     </details>
   </div>
 </div>
@@ -134,20 +143,20 @@
 <div class="tab-content" id="tab-runs">
   <div class="section">
     <div class="section-title">⚡ Worker Runs <span class="count" id="runs-count"></span></div>
-    <div id="runs-stats" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
+    <div id="runs-stats" class="stats-strip"></div>
     <div id="runs-container" style="overflow-x:auto;">
-      <table style="width:100%;font-size:12px;border-collapse:collapse;background:#161b22;border:1px solid #30363d;border-radius:8px;">
+      <table class="runs-table">
         <thead>
-          <tr style="border-bottom:1px solid #30363d;">
-            <th style="text-align:left;padding:8px;color:#8b949e;">Time</th>
-            <th style="text-align:left;padding:8px;color:#8b949e;">Worker</th>
-            <th style="text-align:left;padding:8px;color:#8b949e;">Ticket</th>
-            <th style="text-align:left;padding:8px;color:#8b949e;">Model</th>
-            <th style="text-align:right;padding:8px;color:#8b949e;">Tokens In</th>
-            <th style="text-align:right;padding:8px;color:#8b949e;">Tokens Out</th>
-            <th style="text-align:right;padding:8px;color:#8b949e;">Cost</th>
-            <th style="text-align:right;padding:8px;color:#8b949e;">Duration</th>
-            <th style="text-align:center;padding:8px;color:#8b949e;">Status</th>
+          <tr>
+            <th class="text-left">Time</th>
+            <th class="text-left">Worker</th>
+            <th class="text-left">Ticket</th>
+            <th class="text-left">Model</th>
+            <th class="text-right">Tokens In</th>
+            <th class="text-right">Tokens Out</th>
+            <th class="text-right">Cost</th>
+            <th class="text-right">Duration</th>
+            <th class="text-center">Status</th>
           </tr>
         </thead>
         <tbody id="runs-tbody"></tbody>
@@ -158,13 +167,13 @@
 
 <!-- Tab: Schedule -->
 <div class="tab-content" id="tab-schedule">
-  <iframe src="/calendar.html" style="width:100%;height:calc(100vh - 140px);border:none;border-radius:8px;"></iframe>
+  <iframe src="/calendar.html" class="schedule-iframe"></iframe>
 </div>
 
 <!-- Tab: Activity Log -->
 <div class="tab-content" id="tab-log">
-  <div style="padding: 12px 0;">
-    <div class="activity-log" id="activity-log" style="max-height:500px;"></div>
+  <div class="section">
+    <div class="activity-log" id="activity-log"></div>
   </div>
 </div>
 
@@ -173,14 +182,14 @@
   <div class="section" style="max-width:800px;">
 
     <!-- Quickstart (hardcoded, always at top) -->
-    <div class="doc-section" style="background:#161b22;border:1px solid #30363d;border-radius:8px;margin-bottom:16px;">
-      <div class="doc-header" style="background:#1a1f27;border-bottom:1px solid #30363d;padding:12px 16px;border-radius:8px 8px 0 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleDocSection(this)">
-        <h3 style="color:#f78166;font-size:16px;margin:0;">🚀 Quickstart</h3>
-        <span class="collapse-indicator" style="color:#8b949e;font-size:14px;transition:transform 0.2s;">▼</span>
+    <div class="doc-section">
+      <div class="doc-header" onclick="toggleDocSection(this)">
+        <h3>🚀 Quickstart</h3>
+        <span class="collapse-indicator">▼</span>
       </div>
-      <div class="doc-content" style="padding:16px;font-size:13px;line-height:1.7;color:#c9d1d9;">
+      <div class="doc-content">
         <p><strong>What is this?</strong> OAS — OpenClaw Auto Sprint. A Kanban board where humans and agents coordinate tasks, routines, and reviews.</p>
-        <p style="margin-top:8px;"><strong>Create a task:</strong> Click <span style="color:#58a6ff;">"+ New task"</span> above the board. Fill in title, assignee, priority, description, due date.</p>
+        <p style="margin-top:8px;"><strong>Create a task:</strong> Click "+ New task" above the board. Fill in title, assignee, priority, description, due date.</p>
         <p style="margin-top:8px;"><strong>Edit a task:</strong> Use the action buttons on each card (▶ Start, ✅ Done, 👀 Approve). Click on the priority to change it. Click on the assignee badge to reassign. Click on the date to change due date.</p>
         <p style="margin-top:8px;"><strong>Comments:</strong> Click "💬 comments" to open, write feedback and send.</p>
         <p style="margin-top:8px;"><strong>Search:</strong> Use the search bar to find content in memory files.</p>
@@ -189,7 +198,7 @@
 
     <!-- Dynamic docs sections will be loaded here -->
     <div id="dynamic-docs-container">
-      <p style="color:#8b949e;text-align:center;padding:20px;">Loading documentation...</p>
+      <p class="loading-text" style="text-align:center;padding:20px;">Loading documentation...</p>
     </div>
 
   </div>
@@ -198,7 +207,7 @@
 <!-- Tab: Brain -->
 <div class="tab-content" id="tab-brain">
   <div class="section" style="max-width:900px;">
-    <div id="brain-content" style="font-size:13px;line-height:1.7;color:#c9d1d9;"></div>
+    <div id="brain-content" class="content-reader"></div>
   </div>
 </div>
 
@@ -214,13 +223,13 @@
         <option value="descartada">❌ Descartada</option>
         <option value="promovida">🎯 Promovida</option>
       </select>
-      <input type="text" id="filter-idea-tag" placeholder="Filter by tag" onkeyup="if(event.key==='Enter')applyIdeaFilters()" style="background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 10px; border-radius: 6px; font-size: 12px; margin-left: 8px;">
+      <input type="text" id="filter-idea-tag" placeholder="Filter by tag" onkeyup="if(event.key==='Enter')applyIdeaFilters()" class="filter-tag-input">
       <button class="clear-filters" onclick="clearIdeaFilters()">Clear</button>
     </div>
 
-    <details style="margin: 0 20px 8px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:4px 12px;">
-      <summary style="cursor:pointer;color:#58a6ff;font-size:14px;font-weight:600;padding:8px 0;">💡 Nueva idea</summary>
-      <div class="add-form" style="margin-top:8px;">
+    <details class="form-details">
+      <summary>💡 Nueva idea</summary>
+      <div class="add-form">
         <div class="form-row">
           <input type="text" id="idea-title" placeholder="Título de la idea">
           <input type="text" id="idea-source" placeholder="Fuente (link, persona, etc.)">
@@ -245,7 +254,7 @@
 <!-- Tab: Tools -->
 <div class="tab-content" id="tab-tools">
   <div class="section" style="max-width:900px;">
-    <div id="tools-content" style="font-size:13px;line-height:1.7;color:#c9d1d9;"></div>
+    <div id="tools-content" class="content-reader"></div>
   </div>
 </div>
 
