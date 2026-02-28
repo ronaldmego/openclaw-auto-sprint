@@ -38,7 +38,7 @@ async function loadASC() {
     docsLoaded = true;
   } catch(e) {
     console.error('Failed to load docs', e);
-    document.getElementById('dynamic-docs-container').innerHTML = '<p style="color:#f85149;">Failed to load documentation</p>';
+    document.getElementById('dynamic-docs-container').innerHTML = '<p class="error-text">Failed to load documentation</p>';
   }
 }
 
@@ -57,12 +57,12 @@ function renderDynamicDocs(docs) {
     else if (doc.slug === 'ticket-anatomy') icon = '🎫';
     else if (doc.slug === 'golden-rules-changelog') icon = '📋';
 
-    html += '<div class="doc-section ' + collapsedClass + '" style="background:#161b22;border:1px solid #30363d;border-radius:8px;margin-bottom:16px;">' +
-        '<div class="doc-header" style="background:#1a1f27;border-bottom:1px solid #30363d;padding:12px 16px;border-radius:8px 8px 0 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleDocSection(this)">' +
-          '<h3 style="color:#f78166;font-size:16px;margin:0;">' + icon + ' ' + doc.title + '</h3>' +
-          '<span class="collapse-indicator" style="color:#8b949e;font-size:14px;transition:transform 0.2s;">' + (isFirstDoc ? '▼' : '▶') + '</span>' +
+    html += '<div class="doc-section ' + collapsedClass + '">' +
+        '<div class="doc-header" onclick="toggleDocSection(this)">' +
+          '<h3>' + icon + ' ' + doc.title + '</h3>' +
+          '<span class="collapse-indicator">' + (isFirstDoc ? '▼' : '▶') + '</span>' +
         '</div>' +
-        '<div class="doc-content" style="padding:16px;font-size:13px;line-height:1.7;color:#c9d1d9;">' +
+        '<div class="doc-content">' +
           (typeof marked !== 'undefined' ? marked.parse(doc.content) : '<pre>' + doc.content + '</pre>') +
         '</div>' +
       '</div>';
@@ -98,13 +98,13 @@ function renderToolsMd(md) {
 
     if (line.startsWith('### ')) {
       if (inTable) { html += tableHtml + '</table></div>'; inTable = false; tableHtml = ''; }
-      html += '<div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px;margin-bottom:16px;">';
-      html += '<h3 style="color:#f78166;font-size:15px;margin-bottom:10px;">' + line.replace('### ','') + '</h3>';
+      html += '<div class="doc-block">';
+      html += '<h3 class="doc-heading-h3">' + line.replace('### ','') + '</h3>';
       continue;
     }
     if (line.startsWith('## ') && i > 0) {
       if (inTable) { html += tableHtml + '</table></div>'; inTable = false; tableHtml = ''; }
-      html += '<h2 style="color:#d29922;font-size:16px;margin:20px 0 12px;">' + line.replace('## ','') + '</h2>';
+      html += '<h2 class="doc-heading-h2">' + line.replace('## ','') + '</h2>';
       continue;
     }
 
@@ -113,11 +113,11 @@ function renderToolsMd(md) {
       if (line.includes('---')) continue;
       if (!inTable) {
         inTable = true;
-        tableHtml = '<table style="width:100%;font-size:12px;border-collapse:collapse;">';
-        tableHtml += '<tr>' + cells.map(function(c) { return '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid #30363d;color:#8b949e;">' + c + '</th>'; }).join('') + '</tr>';
+        tableHtml = '<table class="doc-table">';
+        tableHtml += '<tr>' + cells.map(function(c) { return '<th>' + c + '</th>'; }).join('') + '</tr>';
       } else {
-        var rendered = cells.map(function(c) { return c.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#f0f6fc;">$1</strong>').replace(/⚠️/g,'⚠️'); });
-        tableHtml += '<tr>' + rendered.map(function(c) { return '<td style="padding:6px 8px;border-bottom:1px solid #21262d;color:#c9d1d9;">' + c + '</td>'; }).join('') + '</tr>';
+        var rendered = cells.map(function(c) { return c.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); });
+        tableHtml += '<tr>' + rendered.map(function(c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
       }
       continue;
     }
@@ -129,7 +129,7 @@ function renderToolsMd(md) {
     }
 
     if (line.startsWith('*') && line.endsWith('*') && !line.startsWith('**')) {
-      html += '<p style="color:#8b949e;font-size:11px;margin-top:12px;">' + line.replace(/\*/g,'') + '</p>';
+      html += '<p class="doc-note">' + line.replace(/\*/g,'') + '</p>';
     }
   }
   if (inTable) html += tableHtml + '</table></div>';
@@ -154,18 +154,17 @@ async function loadBrain() {
       var key = allKeys[idx];
       var icon = icons[key] || '📝';
       var label = key.startsWith('memory/') ? '📝 ' + key.replace('memory/','') : icon + ' ' + key;
-      var id = 'brain-' + key.replace(/[^a-zA-Z0-9]/g, '-');
       var expanded = (key === 'IDENTITY.md' || key === 'HEARTBEAT.md') ? 'open' : '';
 
-      html += '<details ' + expanded + ' style="background:#161b22;border:1px solid #30363d;border-radius:8px;margin-bottom:8px;">';
-      html += '<summary style="padding:12px 16px;cursor:pointer;color:#f0f6fc;font-weight:600;font-size:14px;user-select:none;">' + label + '</summary>';
-      html += '<div style="padding:4px 16px 16px;border-top:1px solid #30363d;"><pre style="white-space:pre-wrap;word-break:break-word;font-size:12px;color:#c9d1d9;font-family:ui-monospace,monospace;line-height:1.6;margin:0;">' + escapeHtml(files[key]) + '</pre></div>';
+      html += '<details class="brain-details" ' + expanded + '>';
+      html += '<summary class="brain-summary">' + label + '</summary>';
+      html += '<div class="brain-content"><pre class="brain-pre">' + escapeHtml(files[key]) + '</pre></div>';
       html += '</details>';
     }
 
     el.innerHTML = html;
     brainLoaded = true;
-  } catch(e) { el.innerHTML = '<p style="color:#f85149;">Error loading brain files</p>'; console.error(e); }
+  } catch(e) { el.innerHTML = '<p class="error-text">Error loading brain files</p>'; console.error(e); }
 }
 
 // --- Main load ---
@@ -194,17 +193,17 @@ async function load() {
   } catch (err) {
     console.error('Failed to load:', err);
     document.getElementById('last-pulse').textContent = '⚠ Connection error — ' + err.message;
-    document.getElementById('last-pulse').style.color = '#f85149';
+    document.getElementById('last-pulse').className = 'topbar-updated error-text';
     return;
   }
-  document.getElementById('last-pulse').style.color = '';
+  document.getElementById('last-pulse').className = 'topbar-updated';
 
   // Stats
   document.getElementById('stats').innerHTML =
-    '<div class="stat human"><div class="num">' + (stats.human_pending||0) + '</div><div class="label">👤 ' + CONFIG.humanName + '</div></div>' +
-    '<div class="stat agent"><div class="num">' + (stats.agent_active||0) + '</div><div class="label">🤖 ' + CONFIG.agentName + '</div></div>' +
-    '<div class="stat done"><div class="num">' + stats.done + '</div><div class="label">Done</div></div>' +
-    '<div class="stat review"><div class="num">' + stats.pending_review + '</div><div class="label">⏳ Review</div></div>';
+    '<div class="stat-card stat-card--human"><div class="stat-value">' + (stats.human_pending||0) + '</div><div class="stat-detail"><div class="stat-label">👤 ' + CONFIG.humanName + '</div></div></div>' +
+    '<div class="stat-card stat-card--agent"><div class="stat-value">' + (stats.agent_active||0) + '</div><div class="stat-detail"><div class="stat-label">🤖 ' + CONFIG.agentName + '</div></div></div>' +
+    '<div class="stat-card stat-card--done"><div class="stat-value">' + stats.done + '</div><div class="stat-detail"><div class="stat-label">Done</div></div></div>' +
+    '<div class="stat-card stat-card--review"><div class="stat-value">' + stats.pending_review + '</div><div class="stat-detail"><div class="stat-label">⏳ Review</div></div></div>';
 
   // Store tasks globally for filtering
   window._allTasks = tasks;
@@ -223,9 +222,9 @@ async function load() {
   document.getElementById('activity-log').innerHTML = activity.length
     ? activity.map(function(a) {
         var t = new Date(a.timestamp).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-        return '<div style="padding:3px 0;border-bottom:1px solid #21262d;color:#8b949e;">' + logIcon(a.type) + ' <span style="color:#484f58">' + t + '</span> ' + a.message + '</div>';
+        return '<div class="activity-entry">' + logIcon(a.type) + ' <span class="activity-time">' + t + '</span> ' + a.message + '</div>';
       }).join('')
-    : '<div style="color:#484f58">No activity yet</div>';
+    : '<div class="empty-state">No activity yet</div>';
 }
 
 // --- Task CRUD ---
@@ -291,7 +290,7 @@ async function searchMemory() {
     if (found.length) {
       div.innerHTML = found.map(function(t) { return renderCard(t, t.status !== 'archived'); }).join('');
     } else {
-      div.innerHTML = '<span style="color:#484f58">No task found with ID #' + taskId + '</span>';
+      div.innerHTML = '<span class="empty-state">No task found with ID #' + taskId + '</span>';
     }
     return;
   }
@@ -308,15 +307,15 @@ async function searchMemory() {
   div.style.display = 'block';
   var html = '';
   if (taskResults.length) {
-    html += '<div style="color:#d29922;font-size:12px;font-weight:600;margin-bottom:8px;">🎯 Tasks (' + taskResults.length + ')</div>';
+    html += '<div class="search-heading search-heading--tasks">🎯 Tasks (' + taskResults.length + ')</div>';
     html += taskResults.map(function(t) { return renderCard(t, false); }).join('');
   }
   if (memResults.length) {
-    html += '<div style="color:#58a6ff;font-size:12px;font-weight:600;margin:12px 0 8px;">📝 Memory (' + memResults.length + ')</div>';
-    html += memResults.map(function(r) { return '<div style="padding:4px 0;border-bottom:1px solid #21262d;"><span style="color:#58a6ff;font-size:11px;">' + r.file + ':' + r.line + '</span><div style="color:#c9d1d9;margin-top:2px;">' + r.text + '</div></div>'; }).join('');
+    html += '<div class="search-heading search-heading--memory">📝 Memory (' + memResults.length + ')</div>';
+    html += memResults.map(function(r) { return '<div class="search-result-item"><span class="search-result-file">' + r.file + ':' + r.line + '</span><div class="search-result-text">' + r.text + '</div></div>'; }).join('');
   }
   if (!taskResults.length && !memResults.length) {
-    html = '<span style="color:#484f58">No results</span>';
+    html = '<span class="empty-state">No results</span>';
   }
   div.innerHTML = html;
 }
@@ -354,14 +353,14 @@ async function loadIdeas() {
     count.textContent = '(' + ideas.length + ')';
 
     if (ideas.length === 0) {
-      container.innerHTML = '<div style="color:#484f58;padding:12px;font-size:12px">No hay ideas aún. ¡Crea la primera! 💡</div>';
+      container.innerHTML = '<div class="empty-state">No hay ideas aún. ¡Crea la primera! 💡</div>';
       return;
     }
 
     container.innerHTML = ideas.map(renderIdeaCard).join('');
   } catch (error) {
     console.error('Failed to load ideas:', error);
-    document.getElementById('ideas-container').innerHTML = '<div style="color:#f85149;padding:12px;">Error loading ideas</div>';
+    document.getElementById('ideas-container').innerHTML = '<div class="error-text" style="padding:12px;">Error loading ideas</div>';
   }
 }
 
@@ -508,39 +507,39 @@ async function loadRuns() {
     var successRate = runs.length ? Math.round(runs.filter(function(r) { return r.status === 'ok'; }).length / runs.length * 100) : 0;
 
     statsDiv.innerHTML =
-      '<div class="stat"><div class="num" style="color:#3fb950">' + todayRuns.length + '</div><div class="label">Today Runs</div></div>' +
-      '<div class="stat"><div class="num" style="color:#d29922">$' + todayCost.toFixed(3) + '</div><div class="label">Today Cost</div></div>' +
-      '<div class="stat"><div class="num" style="color:#58a6ff">' + weekRuns.length + '</div><div class="label">Week Runs</div></div>' +
-      '<div class="stat"><div class="num" style="color:#d29922">$' + weekCost.toFixed(3) + '</div><div class="label">Week Cost</div></div>' +
-      '<div class="stat"><div class="num" style="color:#bc8cff">' + (weekTokens/1000).toFixed(1) + 'K</div><div class="label">Week Tokens</div></div>' +
-      '<div class="stat"><div class="num" style="color:' + (successRate>=80?'#3fb950':'#f85149') + '">' + successRate + '%</div><div class="label">Success Rate</div></div>';
+      '<div class="stat-card stat-card--green"><div class="stat-value">' + todayRuns.length + '</div><div class="stat-detail"><div class="stat-label">Today Runs</div></div></div>' +
+      '<div class="stat-card stat-card--amber"><div class="stat-value">$' + todayCost.toFixed(3) + '</div><div class="stat-detail"><div class="stat-label">Today Cost</div></div></div>' +
+      '<div class="stat-card stat-card--indigo"><div class="stat-value">' + weekRuns.length + '</div><div class="stat-detail"><div class="stat-label">Week Runs</div></div></div>' +
+      '<div class="stat-card stat-card--amber"><div class="stat-value">$' + weekCost.toFixed(3) + '</div><div class="stat-detail"><div class="stat-label">Week Cost</div></div></div>' +
+      '<div class="stat-card stat-card--purple"><div class="stat-value">' + (weekTokens/1000).toFixed(1) + 'K</div><div class="stat-detail"><div class="stat-label">Week Tokens</div></div></div>' +
+      '<div class="stat-card ' + (successRate>=80?'stat-card--green':'stat-card--red') + '"><div class="stat-value">' + successRate + '%</div><div class="stat-detail"><div class="stat-label">Success Rate</div></div></div>';
 
     if (runs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#484f58;">No worker runs yet. Crons will log here when they execute.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state" style="text-align:center;">No worker runs yet. Crons will log here when they execute.</td></tr>';
       return;
     }
 
     tbody.innerHTML = runs.map(function(r) {
       var time = r.timestamp ? new Date(r.timestamp).toLocaleString('en-US', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
-      var statusColor = r.status === 'ok' ? '#3fb950' : '#f85149';
+      var statusClass = r.status === 'ok' ? 'runs-td-status-ok' : 'runs-td-status-error';
       var modelShort = (r.model || '-').replace('google/', '').replace('anthropic/', '').replace('openai/', '');
-      return '<tr style="border-bottom:1px solid #21262d;">' +
-        '<td style="padding:6px 8px;color:#8b949e;font-size:11px;">' + time + '</td>' +
-        '<td style="padding:6px 8px;color:#f0f6fc;">' + (r.worker || '-') + '</td>' +
-        '<td style="padding:6px 8px;color:#58a6ff;">' + (r.ticket_id ? '#'+r.ticket_id : '-') + '</td>' +
-        '<td style="padding:6px 8px;color:#bc8cff;font-size:11px;">' + modelShort + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;color:#8b949e;">' + (r.tokens_in||0).toLocaleString() + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;color:#8b949e;">' + (r.tokens_out||0).toLocaleString() + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;color:#d29922;">$' + (r.cost_usd||0).toFixed(4) + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;color:#8b949e;">' + (r.duration_s||0) + 's</td>' +
-        '<td style="padding:6px 8px;text-align:center;color:' + statusColor + ';">' + (r.status === 'ok' ? '✅' : '❌') + ' ' + (r.status||'-') + '</td>' +
+      return '<tr>' +
+        '<td class="runs-td-time">' + time + '</td>' +
+        '<td class="runs-td-worker">' + (r.worker || '-') + '</td>' +
+        '<td class="runs-td-ticket">' + (r.ticket_id ? '#'+r.ticket_id : '-') + '</td>' +
+        '<td class="runs-td-model">' + modelShort + '</td>' +
+        '<td class="runs-td-numeric">' + (r.tokens_in||0).toLocaleString() + '</td>' +
+        '<td class="runs-td-numeric">' + (r.tokens_out||0).toLocaleString() + '</td>' +
+        '<td class="runs-td-cost">$' + (r.cost_usd||0).toFixed(4) + '</td>' +
+        '<td class="runs-td-numeric">' + (r.duration_s||0) + 's</td>' +
+        '<td class="' + statusClass + '">' + (r.status === 'ok' ? '✅' : '❌') + ' ' + (r.status||'-') + '</td>' +
       '</tr>';
     }).join('');
 
     runsLoaded = true;
   } catch (error) {
     console.error('Failed to load runs:', error);
-    document.getElementById('runs-tbody').innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#f85149;">Error loading worker runs</td></tr>';
+    document.getElementById('runs-tbody').innerHTML = '<tr><td colspan="9" class="error-text" style="padding:20px;text-align:center;">Error loading worker runs</td></tr>';
   }
 }
 
@@ -552,10 +551,10 @@ async function loadAnalytics() {
     var stats = aging.metrics;
 
     document.getElementById('aging-stats').innerHTML =
-      '<div class="stat"><div class="num" style="color:#f85149">' + stats.stale_tasks + '</div><div class="label">Stale Tasks</div></div>' +
-      '<div class="stat"><div class="num" style="color:#d29922">' + stats.ancient_tasks + '</div><div class="label">Ancient Tasks</div></div>' +
-      '<div class="stat"><div class="num" style="color:#3fb950">' + stats.avg_completion_hours + 'h</div><div class="label">Avg Completion</div></div>' +
-      '<div class="stat"><div class="num" style="color:#bc8cff">' + Math.floor(stats.oldest_active/24) + 'd</div><div class="label">Oldest Active</div></div>';
+      '<div class="stat-card stat-card--red"><div class="stat-value">' + stats.stale_tasks + '</div><div class="stat-detail"><div class="stat-label">Stale Tasks</div></div></div>' +
+      '<div class="stat-card stat-card--amber"><div class="stat-value">' + stats.ancient_tasks + '</div><div class="stat-detail"><div class="stat-label">Ancient Tasks</div></div></div>' +
+      '<div class="stat-card stat-card--green"><div class="stat-value">' + stats.avg_completion_hours + 'h</div><div class="stat-detail"><div class="stat-label">Avg Completion</div></div></div>' +
+      '<div class="stat-card stat-card--purple"><div class="stat-value">' + Math.floor(stats.oldest_active/24) + 'd</div><div class="stat-detail"><div class="stat-label">Oldest Active</div></div></div>';
 
     var staleTasksHtml = aging.tasks
       .filter(function(t) { return (t.isStale || t.isAncient) && t.status !== 'done'; })
@@ -572,8 +571,8 @@ async function loadAnalytics() {
           '</div>' +
           '<div class="card-meta">' +
             '<span class="badge badge-' + task.status + '">' + task.status + '</span>' +
-            '<span class="badge badge-' + task.priority + '">' + task.priority + '</span>' +
-            '<span class="badge ' + (task.assignee === 'human' ? 'badge-other' : 'badge-content') + '">' + task.assignee + '</span>' +
+            '<span class="badge badge-prio-' + task.priority + '">' + task.priority + '</span>' +
+            '<span class="badge ' + (task.assignee === 'human' ? 'badge-assignee-human' : 'badge-assignee-agent') + '">' + task.assignee + '</span>' +
             (task.isAncient ? '<span class="badge badge-security">ANCIENT</span>' : '') +
             (task.isStale ? '<span class="badge badge-high">STALE</span>' : '') +
           '</div>' +
@@ -581,11 +580,11 @@ async function loadAnalytics() {
       }).join('');
 
     document.getElementById('stale-tasks').innerHTML = staleTasksHtml ||
-      '<div style="color:#3fb950;padding:12px;font-size:12px">✅ No stale tasks - everything looks healthy!</div>';
+      '<div class="empty-state" style="color:var(--green);">✅ No stale tasks - everything looks healthy!</div>';
 
   } catch (error) {
     console.error('Failed to load analytics:', error);
-    document.getElementById('aging-stats').innerHTML = '<div style="color:#f85149;padding:12px;">Failed to load analytics</div>';
+    document.getElementById('aging-stats').innerHTML = '<div class="error-text" style="padding:12px;">Failed to load analytics</div>';
   }
 }
 
