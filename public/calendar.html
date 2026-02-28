@@ -3,273 +3,583 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCC Cron Schedule - Weekly Calendar</title>
+    <title>OCC Cron Schedule</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --bg-base: #08080d;
+            --bg-surface: #0e0e16;
+            --bg-elevated: #15151f;
+            --bg-cell: #1a1a26;
+            --bg-cell-night: #111119;
+            --bg-cell-hover: #24243a;
+            --border-subtle: rgba(255, 255, 255, 0.04);
+            --border-medium: rgba(255, 255, 255, 0.08);
+            --accent: #00e5a0;
+            --accent-dim: rgba(0, 229, 160, 0.12);
+            --accent-glow: rgba(0, 229, 160, 0.25);
+            --indigo: #818cf8;
+            --amber: #fbbf24;
+            --red: #f87171;
+            --red-dim: rgba(248, 113, 113, 0.12);
+            --text-primary: #e4e4ec;
+            --text-secondary: #7a7a92;
+            --text-tertiary: #44445a;
+            --font-display: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            background: #1a1a2e;
-            color: #fff;
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding: 20px;
+            background: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-display);
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
+        /* --- Ambient background glow --- */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -40%;
+            left: -20%;
+            width: 70%;
+            height: 70%;
+            background: radial-gradient(ellipse, rgba(0, 229, 160, 0.03) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -30%;
+            right: -20%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(ellipse, rgba(129, 140, 248, 0.025) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
         }
 
-        .header h1 {
-            color: #4facfe;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-
-        .timezone {
-            color: #a0a0a0;
-            font-size: 1.1rem;
-            margin-bottom: 5px;
-        }
-
-        .updated {
-            color: #666;
-            font-size: 0.9rem;
-        }
-
-        .calendar-container {
-            max-width: 1400px;
+        /* --- Layout shell --- */
+        .shell {
+            position: relative;
+            z-index: 1;
+            max-width: 1480px;
             margin: 0 auto;
-            background: #16213e;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 24px 28px 40px;
+        }
+
+        /* --- Top bar --- */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            animation: fadeSlideDown 0.5s ease both;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .topbar-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent) 0%, #00b880 100%);
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .topbar h1 {
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .topbar-meta {
+            text-align: right;
+        }
+
+        .topbar-tz {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .topbar-updated {
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+            animation: pulse 2.5s ease-in-out infinite;
+        }
+
+        /* --- Stats strip --- */
+        .stats-strip {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            animation: fadeSlideDown 0.5s ease 0.1s both;
+        }
+
+        .stat-card {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            transition: border-color 0.25s, background 0.25s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-medium);
+            background: var(--bg-elevated);
+        }
+
+        .stat-card--warn {
+            border-color: rgba(248, 113, 113, 0.2);
+        }
+        .stat-card--warn:hover {
+            border-color: rgba(248, 113, 113, 0.35);
+        }
+
+        .stat-card--ok {
+            border-color: rgba(0, 229, 160, 0.15);
+        }
+
+        .stat-value {
+            font-family: var(--font-mono);
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .stat-card--warn .stat-value { color: var(--red); }
+        .stat-card--ok .stat-value { color: var(--accent); }
+
+        .stat-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .stat-sub {
+            font-size: 0.65rem;
+            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+        }
+
+        /* --- Calendar grid --- */
+        .calendar-wrap {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 2px;
+            margin-bottom: 24px;
+            overflow: hidden;
+            animation: fadeSlideDown 0.5s ease 0.2s both;
         }
 
         .calendar {
             display: grid;
-            grid-template-columns: 80px repeat(7, 1fr);
-            gap: 2px;
-            margin-bottom: 30px;
+            grid-template-columns: 62px repeat(7, 1fr);
+            gap: 1px;
+            background: var(--border-subtle);
         }
 
-        .day-header, .hour-label, .time-cell {
-            padding: 8px 4px;
-            text-align: center;
-            font-size: 0.85rem;
-            border-radius: 6px;
+        .corner-cell {
+            background: var(--bg-surface);
+            border-radius: 12px 0 0 0;
         }
 
         .day-header {
-            background: #4facfe;
-            color: white;
+            background: var(--bg-elevated);
+            padding: 12px 4px;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
             font-weight: 600;
-            font-size: 1rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .day-header:last-of-type {
+            border-radius: 0 12px 0 0;
         }
 
         .hour-label {
-            background: #2c3e50;
-            color: #bdc3c7;
-            font-weight: 500;
+            background: var(--bg-surface);
             display: flex;
             align-items: center;
             justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            padding: 0 4px;
+            user-select: none;
         }
 
         .time-cell {
-            background: #2c3454;
-            min-height: 50px;
+            background: var(--bg-cell);
+            min-height: 42px;
             position: relative;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background 0.2s, box-shadow 0.2s;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
             justify-content: center;
             gap: 2px;
+            padding: 3px 2px;
         }
 
         .time-cell:hover {
-            background: #34495e;
-            transform: scale(1.02);
+            background: var(--bg-cell-hover);
+            z-index: 2;
         }
 
         .time-cell.night {
-            background: #1e2a3a;
+            background: var(--bg-cell-night);
         }
-
         .time-cell.night:hover {
-            background: #2c3e50;
-        }
-
-        .time-cell.overlapping {
-            background: #e67e22;
-            border: 3px solid #e74c3c;
-            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
-        }
-
-        .time-cell.overlapping:hover {
-            background: #f39c12;
-            border: 3px solid #c0392b;
-            box-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+            background: var(--bg-cell-hover);
         }
 
         .time-cell.idle {
-            background: #27ae60;
-            opacity: 0.7;
+            background: var(--bg-cell);
+        }
+        .time-cell.idle:hover {
+            background: var(--bg-cell-hover);
         }
 
-        .time-cell.idle:hover {
-            background: #2ecc71;
-            opacity: 1;
+        .time-cell.has-crons {
+            background: rgba(0, 229, 160, 0.04);
+        }
+        .time-cell.has-crons:hover {
+            background: rgba(0, 229, 160, 0.08);
+        }
+
+        .time-cell.overlapping {
+            background: var(--red-dim);
+            box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.3);
+        }
+        .time-cell.overlapping:hover {
+            background: rgba(248, 113, 113, 0.18);
+            box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.5);
+        }
+
+        .overlap-badge {
+            position: absolute;
+            top: 2px;
+            right: 3px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--red);
+            color: #fff;
+            font-size: 8px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            display: grid;
+            place-items: center;
+            line-height: 1;
+            z-index: 3;
+            box-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
         }
 
         .cron-item {
             background: var(--cron-color);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.7rem;
+            color: #fff;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.55rem;
             font-weight: 500;
             text-align: center;
-            line-height: 1.2;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-            margin: 1px;
-            flex: 0 1 auto;
+            line-height: 1.35;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+        }
+
+        /* --- Legend --- */
+        .legend-section {
+            animation: fadeSlideDown 0.5s ease 0.3s both;
+        }
+
+        .legend-header {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+            padding-left: 2px;
         }
 
         .legend {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 8px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            padding: 12px;
-            background: #2c3454;
-            border-radius: 8px;
-            transition: background 0.2s ease;
+            gap: 12px;
+            padding: 10px 14px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            transition: border-color 0.2s, background 0.2s;
         }
 
         .legend-item:hover {
-            background: #34495e;
+            border-color: var(--border-medium);
+            background: var(--bg-elevated);
         }
 
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            margin-right: 12px;
+        .legend-swatch {
+            width: 4px;
+            height: 28px;
+            border-radius: 2px;
             flex-shrink: 0;
         }
 
         .legend-text {
             flex: 1;
+            min-width: 0;
         }
 
         .legend-name {
-            font-weight: 600;
-            margin-bottom: 2px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .legend-schedule {
-            font-size: 0.85rem;
-            color: #a0a0a0;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-tertiary);
+            margin-top: 1px;
         }
 
-        .stats {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-
-        .stat {
-            text-align: center;
-            padding: 15px 20px;
-            background: #2c3454;
-            border-radius: 10px;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #4facfe;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: #a0a0a0;
-            margin-top: 5px;
-        }
-
+        /* --- Tooltip --- */
         .tooltip {
-            position: absolute;
-            background: #000;
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.8rem;
+            position: fixed;
+            background: rgba(14, 14, 22, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-medium);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.75rem;
             pointer-events: none;
             z-index: 1000;
             opacity: 0;
-            transition: opacity 0.2s;
-            max-width: 200px;
+            transition: opacity 0.15s;
+            max-width: 300px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            line-height: 1.5;
         }
 
-        @media (max-width: 768px) {
+        .tooltip strong {
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+
+        .tooltip .tt-time {
+            color: var(--accent);
+            font-family: var(--font-mono);
+            font-weight: 600;
+            font-size: 0.72rem;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .tooltip .tt-overlap-warn {
+            color: var(--red);
+            font-weight: 600;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 4px;
+        }
+
+        .tooltip .tt-cron {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+        }
+
+        .tooltip .tt-idle {
+            color: var(--text-tertiary);
+            font-style: italic;
+        }
+
+        /* --- Error state --- */
+        .error-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .error-state h3 {
+            color: var(--red);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .error-state p {
+            color: var(--text-tertiary);
+            font-size: 0.82rem;
+        }
+
+        /* --- Loading state --- */
+        .loading-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-tertiary);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+
+        .loading-state .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-medium);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeSlideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* --- Mobile --- */
+        @media (max-width: 900px) {
+            .shell { padding: 16px 12px 32px; }
+
+            .topbar { flex-direction: column; gap: 10px; align-items: flex-start; }
+            .topbar-right { align-self: flex-start; }
+
+            .stats-strip {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
             .calendar {
-                grid-template-columns: 60px repeat(7, 1fr);
-                gap: 1px;
+                grid-template-columns: 48px repeat(7, 1fr);
             }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .day-header, .hour-label, .time-cell {
-                font-size: 0.7rem;
-                padding: 6px 2px;
-            }
-            
-            .cron-item {
-                font-size: 0.6rem;
-                padding: 1px 4px;
-            }
-            
-            .legend {
-                grid-template-columns: 1fr;
-            }
+
+            .day-header { font-size: 0.6rem; padding: 8px 2px; letter-spacing: 0.05em; }
+            .hour-label { font-size: 0.55rem; }
+            .time-cell { min-height: 34px; padding: 2px 1px; }
+            .cron-item { font-size: 0.48rem; padding: 1px 3px; }
+            .legend { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 500px) {
+            .stats-strip { grid-template-columns: 1fr; }
+            .stat-card { padding: 10px 14px; }
+            .stat-value { font-size: 1.3rem; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🕒 OCC Cron Schedule</h1>
-        <div class="timezone">America/Panama (EST)</div>
-        <div class="updated">Last updated: <span id="lastUpdated"></span></div>
-    </div>
-
-    <div class="calendar-container">
-        <div class="stats" id="stats">
-            <!-- Stats will be populated by JavaScript -->
+    <div class="shell">
+        <!-- Top bar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-icon">C</div>
+                <h1>Cron Schedule</h1>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-meta">
+                    <div class="topbar-tz">America/Panama EST</div>
+                    <div class="topbar-updated"><span id="lastUpdated"></span></div>
+                </div>
+                <div class="status-dot" title="Live"></div>
+            </div>
         </div>
 
-        <div class="calendar" id="calendar">
-            <!-- Calendar will be populated by JavaScript -->
+        <!-- Stats -->
+        <div class="stats-strip" id="stats"></div>
+
+        <!-- Calendar -->
+        <div class="calendar-wrap">
+            <div class="calendar" id="calendar"></div>
         </div>
 
-        <div class="legend" id="legend">
-            <!-- Legend will be populated by JavaScript -->
+        <!-- Legend -->
+        <div class="legend-section">
+            <div class="legend-header">Workers</div>
+            <div class="legend" id="legend"></div>
         </div>
     </div>
 
@@ -280,48 +590,35 @@
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const hours = Array.from({length: 24}, (_, i) => i);
 
-        // Color palette for crons
+        // Refined color palette — saturated but sophisticated
         const cronColors = [
-            '#e74c3c', '#f39c12', '#9b59b6', '#2ecc71', '#f1c40f', 
-            '#3498db', '#e67e22', '#34495e', '#e91e63', '#ff5722',
-            '#607d8b', '#795548', '#009688', '#8bc34a', '#ffc107'
+            '#6366f1', '#f43f5e', '#f59e0b', '#10b981', '#8b5cf6',
+            '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6',
+            '#a855f7', '#ef4444', '#eab308', '#22d3ee', '#d946ef'
         ];
 
-        // Extract shortName from cron name (remove long descriptive text)
         function extractShortName(name) {
-            // Try to extract ticket number first
             const ticketMatch = name.match(/#(\d+)/);
             if (ticketMatch) {
-                // Get the emoji and first few words before the #
                 const beforeTicket = name.split(' — ')[0] || name.split('#')[0];
                 const emoji = beforeTicket.match(/[^\w\s]/)?.[0] || '';
                 const shortText = beforeTicket.replace(/[^\w\s]/g, '').trim().split(' ').slice(0, 2).join(' ');
                 return `${emoji}#${ticketMatch[1]} ${shortText}`.trim();
             }
-            
-            // Fallback: first emoji + first 1-2 words
             const emoji = name.match(/[^\w\s]/)?.[0] || '';
             const words = name.replace(/[^\w\s]/g, '').trim().split(' ').slice(0, 2);
             return `${emoji} ${words.join(' ')}`.trim();
         }
 
-        // Parse cron expression into schedule times
         function parseCronExpression(expr) {
             const parts = expr.split(' ');
             if (parts.length !== 5) return [];
-            
             const [minute, hour, day, month, dayOfWeek] = parts;
             const times = [];
-            
-            // Parse minutes
-            const minutes = minute === '*' ? [0] : 
+            const minutes = minute === '*' ? [0] :
                            minute.includes(',') ? minute.split(',').map(Number) : [Number(minute)];
-            
-            // Parse hours
-            const hours = hour === '*' ? Array.from({length: 24}, (_, i) => i) :
-                         hour.includes(',') ? hour.split(',').map(Number) : [Number(hour)];
-            
-            // Parse days of week (0 = Sunday, 1 = Monday, etc.)
+            const hrs = hour === '*' ? Array.from({length: 24}, (_, i) => i) :
+                       hour.includes(',') ? hour.split(',').map(Number) : [Number(hour)];
             let daysOfWeek = [];
             if (dayOfWeek === '*') {
                 daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
@@ -330,29 +627,20 @@
             } else {
                 daysOfWeek = [Number(dayOfWeek)];
             }
-            
-            // Generate all combinations
-            for (const h of hours) {
+            for (const h of hrs) {
                 for (const m of minutes) {
                     times.push({ hour: h, minute: m, days: daysOfWeek });
                 }
             }
-            
             return times;
         }
 
-        // Parse "every" schedule into times
         function parseEverySchedule(everyMs, anchorMs) {
             const times = [];
             const intervalHours = everyMs / (1000 * 60 * 60);
-            
-            // Calculate anchor hour
             const anchorDate = new Date(anchorMs);
             const anchorHour = anchorDate.getHours();
-            
-            // Generate times based on interval
             if (intervalHours === 6) {
-                // Every 6 hours: 0, 6, 12, 18
                 times.push(
                     { hour: 0, minute: 0, days: [0,1,2,3,4,5,6] },
                     { hour: 6, minute: 0, days: [0,1,2,3,4,5,6] },
@@ -360,99 +648,69 @@
                     { hour: 18, minute: 0, days: [0,1,2,3,4,5,6] }
                 );
             } else if (intervalHours === 24) {
-                // Daily at anchor hour
                 times.push({ hour: anchorHour, minute: anchorDate.getMinutes(), days: [0,1,2,3,4,5,6] });
             } else if (intervalHours > 24) {
-                // Weekly or less frequent - show at anchor time on anchor day
                 const anchorDay = anchorDate.getDay();
                 times.push({ hour: anchorHour, minute: anchorDate.getMinutes(), days: [anchorDay] });
             } else {
-                // Multiple times per day
                 const timesPerDay = Math.floor(24 / intervalHours);
                 for (let i = 0; i < timesPerDay; i++) {
                     const hour = (anchorHour + i * intervalHours) % 24;
                     times.push({ hour: hour, minute: anchorDate.getMinutes(), days: [0,1,2,3,4,5,6] });
                 }
             }
-            
             return times;
         }
 
-        // Generate human-readable schedule description
         function generateScheduleDescription(schedule, times) {
             if (schedule.kind === 'cron') {
-                // For cron expressions, generate description from parsed times
                 if (times.length === 1) {
                     const time = times[0];
-                    const timeStr = time.hour === 0 ? '12am' : 
+                    const timeStr = time.hour === 0 ? '12am' :
                                    time.hour === 12 ? '12pm' :
-                                   time.hour < 12 ? `${time.hour}${time.minute ? ':'+String(time.minute).padStart(2,'0') : ''}am` : 
+                                   time.hour < 12 ? `${time.hour}${time.minute ? ':'+String(time.minute).padStart(2,'0') : ''}am` :
                                    `${time.hour-12}${time.minute ? ':'+String(time.minute).padStart(2,'0') : ''}pm`;
-                    
-                    if (time.days.length === 7) {
-                        return `${timeStr} daily`;
-                    } else if (time.days.length === 1) {
-                        return `${days[time.days[0]]} ${timeStr}`;
-                    } else {
-                        const dayNames = time.days.map(d => days[d]).join(', ');
-                        return `${dayNames} ${timeStr}`;
-                    }
+                    if (time.days.length === 7) return `${timeStr} daily`;
+                    else if (time.days.length === 1) return `${days[time.days[0]]} ${timeStr}`;
+                    else return `${time.days.map(d => days[d]).join(', ')} ${timeStr}`;
                 } else if (times.length > 1) {
-                    // Multiple times - check if they're all the same days
                     const firstDays = times[0].days;
-                    const sameDays = times.every(t => t.days.length === firstDays.length && 
+                    const sameDays = times.every(t => t.days.length === firstDays.length &&
                                                      t.days.every(d => firstDays.includes(d)));
-                    
                     if (sameDays && firstDays.length === 7) {
                         const timeStrs = times.map(t => {
-                            const h = t.hour === 0 ? '12am' : 
-                                     t.hour === 12 ? '12pm' :
-                                     t.hour < 12 ? `${t.hour}${t.minute ? ':'+String(t.minute).padStart(2,'0') : ''}am` : 
-                                     `${t.hour-12}${t.minute ? ':'+String(t.minute).padStart(2,'0') : ''}pm`;
-                            return h;
+                            return t.hour === 0 ? '12am' :
+                                   t.hour === 12 ? '12pm' :
+                                   t.hour < 12 ? `${t.hour}${t.minute ? ':'+String(t.minute).padStart(2,'0') : ''}am` :
+                                   `${t.hour-12}${t.minute ? ':'+String(t.minute).padStart(2,'0') : ''}pm`;
                         }).join(', ');
                         return `${timeStrs} daily`;
                     }
                 }
-                return schedule.expr; // Fallback to raw cron expression
+                return schedule.expr;
             } else if (schedule.kind === 'every') {
-                const hours = schedule.everyMs / (1000 * 60 * 60);
-                if (hours < 1) {
-                    const minutes = schedule.everyMs / (1000 * 60);
-                    return `Every ${minutes} minutes`;
-                } else if (hours < 24) {
-                    return `Every ${hours} hours`;
-                } else {
-                    const days = hours / 24;
-                    return days === 7 ? 'Weekly' : `Every ${days} days`;
+                const hrs = schedule.everyMs / (1000 * 60 * 60);
+                if (hrs < 1) return `Every ${schedule.everyMs / (1000 * 60)} min`;
+                else if (hrs < 24) return `Every ${hrs}h`;
+                else {
+                    const d = hrs / 24;
+                    return d === 7 ? 'Weekly' : `Every ${d}d`;
                 }
             }
-            return 'Unknown schedule';
+            return 'Unknown';
         }
 
-        // Fetch cron data from API
         async function fetchCronData() {
             try {
                 const response = await fetch('/api/crons');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
-                
-                if (!data.jobs || !Array.isArray(data.jobs)) {
-                    throw new Error('Invalid cron data format');
-                }
+                if (!data.jobs || !Array.isArray(data.jobs)) throw new Error('Invalid cron data format');
 
-                // Process the cron data
                 cronData = data.jobs.filter(job => job.enabled).map((job, index) => {
                     let times = [];
-                    
-                    if (job.schedule.kind === 'cron') {
-                        times = parseCronExpression(job.schedule.expr);
-                    } else if (job.schedule.kind === 'every') {
-                        times = parseEverySchedule(job.schedule.everyMs, job.schedule.anchorMs);
-                    }
-                    
+                    if (job.schedule.kind === 'cron') times = parseCronExpression(job.schedule.expr);
+                    else if (job.schedule.kind === 'every') times = parseEverySchedule(job.schedule.everyMs, job.schedule.anchorMs);
                     return {
                         id: job.id,
                         name: job.name,
@@ -466,7 +724,6 @@
                         lastStatus: job.state?.lastStatus
                     };
                 });
-                
                 return true;
             } catch (error) {
                 console.error('Error fetching cron data:', error);
@@ -475,55 +732,51 @@
             }
         }
 
-        // Show error message
         function showError(message) {
-            const calendar = document.getElementById('calendar');
-            calendar.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #e74c3c;">
-                    <h3>⚠️ Error Loading Cron Schedule</h3>
+            document.getElementById('calendar').innerHTML = `
+                <div class="error-state">
+                    <h3>Failed to load schedule</h3>
                     <p>${message}</p>
-                    <p>Using offline fallback data would go here...</p>
                 </div>
             `;
+        }
+
+        function formatHour(h) {
+            if (h === 0) return '12a';
+            if (h === 12) return '12p';
+            return h < 12 ? `${h}a` : `${h - 12}p`;
         }
 
         function createCalendar() {
             const calendar = document.getElementById('calendar');
             calendar.innerHTML = '';
 
-            // Create empty corner cell
+            // Corner cell
             const corner = document.createElement('div');
+            corner.className = 'corner-cell';
             calendar.appendChild(corner);
 
-            // Create day headers
+            // Day headers
             days.forEach(day => {
-                const dayHeader = document.createElement('div');
-                dayHeader.className = 'day-header';
-                dayHeader.textContent = day;
-                calendar.appendChild(dayHeader);
+                const el = document.createElement('div');
+                el.className = 'day-header';
+                el.textContent = day;
+                calendar.appendChild(el);
             });
 
-            // Create time grid
+            // Time grid
             hours.forEach(hour => {
-                // Hour label
                 const hourLabel = document.createElement('div');
                 hourLabel.className = 'hour-label';
-                hourLabel.textContent = hour === 0 ? '12am' : 
-                                       hour === 12 ? '12pm' :
-                                       hour < 12 ? `${hour}am` : `${hour-12}pm`;
+                hourLabel.textContent = formatHour(hour);
                 calendar.appendChild(hourLabel);
 
-                // Day cells for this hour
                 days.forEach((day, dayIndex) => {
                     const cell = document.createElement('div');
                     cell.className = 'time-cell';
-                    
-                    // Add night class for hours 23, 0-6
-                    if (hour >= 23 || hour <= 6) {
-                        cell.classList.add('night');
-                    }
 
-                    // Find crons that run at this hour/day
+                    if (hour >= 22 || hour <= 5) cell.classList.add('night');
+
                     const cronsAtThisTime = [];
                     cronData.forEach(cron => {
                         cron.times.forEach(time => {
@@ -533,37 +786,28 @@
                         });
                     });
 
-                    // Add cron items to cell
                     cronsAtThisTime.forEach(cron => {
-                        const cronItem = document.createElement('div');
-                        cronItem.className = 'cron-item';
-                        cronItem.style.setProperty('--cron-color', cron.color);
-                        cronItem.textContent = cron.shortName;
-                        cell.appendChild(cronItem);
+                        const item = document.createElement('div');
+                        item.className = 'cron-item';
+                        item.style.setProperty('--cron-color', cron.color);
+                        item.textContent = cron.shortName;
+                        cell.appendChild(item);
                     });
 
-                    // Add overlapping/idle classes
                     if (cronsAtThisTime.length >= 2) {
                         cell.classList.add('overlapping');
-                        // Add warning icon for overlapping slots
-                        const warningIcon = document.createElement('div');
-                        warningIcon.innerHTML = '⚠️';
-                        warningIcon.style.cssText = `
-                            position: absolute;
-                            top: 2px;
-                            right: 2px;
-                            font-size: 12px;
-                            z-index: 1;
-                        `;
-                        cell.appendChild(warningIcon);
-                    } else if (cronsAtThisTime.length === 0) {
+                        const badge = document.createElement('div');
+                        badge.className = 'overlap-badge';
+                        badge.textContent = cronsAtThisTime.length;
+                        cell.appendChild(badge);
+                    } else if (cronsAtThisTime.length === 1) {
+                        cell.classList.add('has-crons');
+                    } else {
                         cell.classList.add('idle');
                     }
 
-                    // Add hover tooltips
                     cell.addEventListener('mouseenter', (e) => showTooltip(e, hour, day, cronsAtThisTime));
                     cell.addEventListener('mouseleave', hideTooltip);
-
                     calendar.appendChild(cell);
                 });
             });
@@ -572,119 +816,102 @@
         function createLegend() {
             const legend = document.getElementById('legend');
             legend.innerHTML = '';
-
             cronData.forEach(cron => {
-                const legendItem = document.createElement('div');
-                legendItem.className = 'legend-item';
-                
-                legendItem.innerHTML = `
-                    <div class="legend-color" style="background-color: ${cron.color}"></div>
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-swatch" style="background:${cron.color}"></div>
                     <div class="legend-text">
                         <div class="legend-name">${cron.name}</div>
                         <div class="legend-schedule">${cron.schedule}</div>
                     </div>
                 `;
-                
-                legend.appendChild(legendItem);
+                legend.appendChild(item);
             });
         }
 
         function createStats() {
             const stats = document.getElementById('stats');
-            
-            // Count total executions per week
-            let totalExecs = 0;
-            let idleHours = 0;
-            let overlappingSlots = 0;
-            
+            let totalExecs = 0, idleHours = 0, overlappingSlots = 0;
             for (let hour = 0; hour < 24; hour++) {
                 for (let day = 0; day < 7; day++) {
-                    let cronsAtThisTime = 0;
+                    let count = 0;
                     cronData.forEach(cron => {
                         cron.times.forEach(time => {
-                            if (time.hour === hour && time.days.includes(day)) {
-                                cronsAtThisTime++;
-                                totalExecs++;
-                            }
+                            if (time.hour === hour && time.days.includes(day)) { count++; totalExecs++; }
                         });
                     });
-                    
-                    if (cronsAtThisTime === 0) idleHours++;
-                    if (cronsAtThisTime >= 2) overlappingSlots++;
+                    if (count === 0) idleHours++;
+                    if (count >= 2) overlappingSlots++;
                 }
             }
 
-            // Determine color for overlapping slots stat
-            const overlappingColor = overlappingSlots === 0 ? '#2ecc71' : '#e74c3c';
-            const overlappingBg = overlappingSlots === 0 ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)';
+            const overlapClass = overlappingSlots === 0 ? 'stat-card--ok' : 'stat-card--warn';
+            const overlapLabel = overlappingSlots === 0 ? 'None' : overlappingSlots;
 
             stats.innerHTML = `
-                <div class="stat">
-                    <div class="stat-number">${cronData.length}</div>
-                    <div class="stat-label">Active Crons</div>
+                <div class="stat-card">
+                    <div class="stat-value">${cronData.length}</div>
+                    <div class="stat-detail">
+                        <div class="stat-label">Active</div>
+                        <div class="stat-sub">workers</div>
+                    </div>
                 </div>
-                <div class="stat">
-                    <div class="stat-number">${totalExecs}</div>
-                    <div class="stat-label">Weekly Executions</div>
+                <div class="stat-card">
+                    <div class="stat-value">${totalExecs}</div>
+                    <div class="stat-detail">
+                        <div class="stat-label">Executions</div>
+                        <div class="stat-sub">per week</div>
+                    </div>
                 </div>
-                <div class="stat">
-                    <div class="stat-number">${idleHours}</div>
-                    <div class="stat-label">Idle Hours</div>
+                <div class="stat-card">
+                    <div class="stat-value">${idleHours}</div>
+                    <div class="stat-detail">
+                        <div class="stat-label">Idle Slots</div>
+                        <div class="stat-sub">of ${24 * 7}</div>
+                    </div>
                 </div>
-                <div class="stat" style="background: ${overlappingBg}; border: 2px solid ${overlappingColor};">
-                    <div class="stat-number" style="color: ${overlappingColor};">${overlappingSlots}</div>
-                    <div class="stat-label" style="color: ${overlappingColor};">Overlapping Slots</div>
+                <div class="stat-card ${overlapClass}">
+                    <div class="stat-value">${overlapLabel}</div>
+                    <div class="stat-detail">
+                        <div class="stat-label">Overlaps</div>
+                        <div class="stat-sub">${overlappingSlots === 0 ? 'all clear' : 'conflicts'}</div>
+                    </div>
                 </div>
             `;
         }
 
         function showTooltip(e, hour, day, crons) {
             const tooltip = document.getElementById('tooltip');
-            const hourStr = hour === 0 ? '12am' : 
-                           hour === 12 ? '12pm' :
-                           hour < 12 ? `${hour}am` : `${hour-12}pm`;
-            
-            let content = `<strong>${day} ${hourStr}</strong><br>`;
-            
+            const hourStr = formatHour(hour).replace('a', ' AM').replace('p', ' PM');
+            let content = `<span class="tt-time">${day} ${hourStr}</span>`;
+
             if (crons.length === 0) {
-                content += '<em>No crons scheduled</em>';
+                content += '<span class="tt-idle">No workers scheduled</span>';
             } else if (crons.length >= 2) {
-                content += `<span style="color: #e74c3c; font-weight: bold;">⚠️ OVERLAPPING DETECTED!</span><br>`;
-                content += `<strong>${crons.length} crons running simultaneously:</strong><br>`;
-                content += crons.map(cron => `• ${cron.name}`).join('<br>');
+                content += `<div class="tt-overlap-warn">${crons.length} overlapping</div>`;
+                content += crons.map(c => `<div class="tt-cron">${c.name}</div>`).join('');
             } else {
-                content += crons.map(cron => `• ${cron.name}`).join('<br>');
+                content += crons.map(c => `<div class="tt-cron">${c.name}</div>`).join('');
             }
-            
+
             tooltip.innerHTML = content;
             tooltip.style.opacity = '1';
-            tooltip.style.left = e.pageX + 10 + 'px';
-            tooltip.style.top = e.pageY - 10 + 'px';
+            tooltip.style.left = Math.min(e.pageX + 12, window.innerWidth - 320) + 'px';
+            tooltip.style.top = (e.pageY - 10) + 'px';
         }
 
         function hideTooltip() {
-            const tooltip = document.getElementById('tooltip');
-            tooltip.style.opacity = '0';
+            document.getElementById('tooltip').style.opacity = '0';
         }
 
         function updateLastUpdated() {
-            const now = new Date();
-            const options = { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit',
-                timeZone: 'America/Panama'
-            };
-            document.getElementById('lastUpdated').textContent = now.toLocaleDateString('en-US', options);
+            const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Panama' };
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString('en-US', options);
         }
 
-        // Initialize calendar
         document.addEventListener('DOMContentLoaded', async () => {
-            // Show loading state
-            document.getElementById('calendar').innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px;">Loading cron schedule...</div>';
-            
+            document.getElementById('calendar').innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading schedule...</div>';
             const success = await fetchCronData();
             if (success && cronData.length > 0) {
                 createCalendar();
