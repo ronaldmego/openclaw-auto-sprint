@@ -555,19 +555,28 @@ app.get('/api/logs', (req, res) => {
   } catch { res.json([]); }
 });
 
-// API: Get crons from OpenClaw Gateway
+// API: Get crons from OpenClaw Gateway (with cache fallback)
+let cronCache = { data: null, updatedAt: null };
+
 app.get('/api/crons', (req, res) => {
-  exec('openclaw cron list --json', { timeout: 10000 }, (error, stdout, stderr) => {
+  exec('openclaw cron list --json', { timeout: 15000 }, (error, stdout, stderr) => {
     if (error) {
-      console.error('Error fetching crons:', error);
-      res.status(500).json({ error: 'Failed to fetch cron jobs', details: error.message });
-      return;
+      console.error('Error fetching crons:', error.message);
+      if (cronCache.data) {
+        console.log('Serving cached cron data from', cronCache.updatedAt);
+        return res.json({ ...cronCache.data, _cached: true, _cachedAt: cronCache.updatedAt });
+      }
+      return res.status(500).json({ error: 'Failed to fetch cron jobs', details: error.message });
     }
     try {
       const cronData = JSON.parse(stdout);
+      cronCache = { data: cronData, updatedAt: new Date().toISOString() };
       res.json(cronData);
     } catch (parseError) {
-      console.error('Error parsing cron JSON:', parseError);
+      console.error('Error parsing cron JSON:', parseError.message);
+      if (cronCache.data) {
+        return res.json({ ...cronCache.data, _cached: true, _cachedAt: cronCache.updatedAt });
+      }
       res.status(500).json({ error: 'Failed to parse cron data', details: parseError.message });
     }
   });
