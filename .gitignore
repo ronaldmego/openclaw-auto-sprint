@@ -2,6 +2,10 @@ node_modules/
 data/
 .env
 
+# Playwright screenshots
+*.png
+*.jpeg
+
 # User data
 data/tasks.json
 data/activity.json
