@@ -236,7 +236,13 @@ body::after {
   padding: 0 24px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
+.tabs::-webkit-scrollbar { display: none; }
 
 .tab {
   padding: 10px 16px;
@@ -728,7 +734,7 @@ body::after {
 
 /* ===== BOARD ===== */
 .board { display: flex; gap: 16px; padding: 12px 24px; overflow-x: auto; }
-.column { flex: 1; min-width: 260px; max-width: 400px; }
+.column { flex: 1; min-width: 260px; }
 
 .column-header {
   font-size: 12px;
@@ -1088,8 +1094,15 @@ body::after {
   .doc-content { padding: 12px; }
 }
 
+@media (max-width: 700px) {
+  .tabs { padding: 0 12px; }
+  .tab { padding: 8px 12px; font-size: 12px; }
+  .card-meta .badge { font-size: 9px; padding: 2px 6px; }
+}
+
 @media (max-width: 500px) {
   .stats-strip { grid-template-columns: 1fr; }
   .stat-card { padding: 10px 14px; }
   .stat-value { font-size: 1.3rem; }
+  .card-meta { gap: 4px; }
 }

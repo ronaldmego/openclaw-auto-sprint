@@ -206,7 +206,7 @@ app.get('/api/tasks', (req, res) => {
 app.post('/api/tasks', (req, res) => {
   const db = loadDB();
   const { title, description, deliverable_type, deliverable_url, priority, assignee, drive_link, github_link, project_ref, parent_id, due_date, status, ticket_type } = req.body;
-  const validStatuses = ['todo', 'doing', 'done', 'routine'];
+  const validStatuses = ['todo', 'doing', 'done', 'completed', 'routine'];
   const task = {
     id: db.nextId++,
     title,
@@ -242,7 +242,7 @@ app.patch('/api/tasks/:id', (req, res) => {
   if (!task) return res.status(404).json({ error: 'not found' });
 
   const allowed = ['title', 'description', 'deliverable_type', 'deliverable_url', 'status', 'priority', 'reviewed_by_owner', 'assignee', 'drive_link', 'github_link', 'project_ref', 'parent_id', 'due_date', 'blocked_by', 'ticket_type', 'review_action'];
-  const validStatuses = ['todo', 'doing', 'done', 'routine', 'archived'];
+  const validStatuses = ['todo', 'doing', 'done', 'completed', 'routine', 'archived'];
   const validPriorities = ['low', 'normal', 'high', 'critical'];
   const validTicketTypes = ['auto', 'manual'];
   for (const [key, val] of Object.entries(req.body)) {
