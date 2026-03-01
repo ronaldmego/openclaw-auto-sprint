@@ -114,7 +114,10 @@ Browser (UI) ──HTTP──> server.js (Express)
 ### Worker Runs (Observability)
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/worker-runs` | Log a worker execution |
+| GET | `/api/worker-runs/pending` | List in-progress tracked runs |
+| POST | `/api/worker-runs/start` | Start a tracked run (snapshots usage %, returns `run_id`) |
+| POST | `/api/worker-runs/:run_id/complete` | Complete a tracked run (calc cost, duration, usage delta) |
+| POST | `/api/worker-runs` | Log a worker execution (auto-calculates `cost_usd` if model+tokens provided) |
 | GET | `/api/worker-runs` | List runs (`?limit=100`) |
 
 ### Other
@@ -206,6 +209,19 @@ Los crons deben loguear su ejecución vía POST `/api/worker-runs` al terminar. 
 **Campos requeridos:** `worker` (nombre del cron). Todo lo demás es opcional pero recomendado.
 
 **Storage:** `data/worker-runs.jsonl` (append-only, una línea JSON por run).
+
+### Cost Auto-Calculation
+If `cost_usd` is 0 or missing but `model` + `tokens_in`/`tokens_out` are provided, cost is auto-calculated using the built-in pricing table (`MODEL_PRICING` in server.js). Provider prefixes are stripped automatically (e.g. `google/gemini-2.5-flash` → `gemini-2.5-flash`).
+
+### Tracked Run Flow (start/complete)
+For crons that want usage % tracking + auto-duration:
+
+1. `POST /api/worker-runs/start` with `{ worker, model, ticket_id }` → returns `run_id`
+2. Execute the cron work
+3. `POST /api/worker-runs/:run_id/complete` with `{ status, tokens_in, tokens_out }` → auto-calculates cost and duration
+
+Tracked entries include `run_id`, `tracked: true`, `usage_before_pct`, `usage_after_pct` fields.
+In-memory pending runs are lost on PM2 restart (acceptable for MVP).
 
 ### Ejemplo de log desde un cron
 ```bash
