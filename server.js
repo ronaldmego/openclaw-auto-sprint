@@ -17,6 +17,46 @@ const DEFAULT_AUTHOR = process.env.OCC_DEFAULT_AUTHOR || 'Human';
 const DB_FILE = path.join(__dirname, 'data', 'tasks.json');
 const LOG_FILE = path.join(__dirname, 'data', 'activity.json');
 const WORKER_RUNS_FILE = path.join(__dirname, 'data', 'worker-runs.jsonl');
+const USAGE_API_URL = process.env.OAS_USAGE_API_URL || 'http://127.0.0.1:3400/api/global-usage';
+
+// Model pricing (USD per 1M tokens) — keep in sync with issue #39
+const MODEL_PRICING = {
+  'claude-opus-4-6':    { input: 15.00, output: 75.00 },
+  'claude-sonnet-4-6':  { input:  3.00, output: 15.00 },
+  'claude-haiku-3-5':   { input:  0.80, output:  4.00 },
+  'gpt-5.2':            { input:  2.00, output:  8.00 },
+  'gemini-2.5-flash':   { input:  0.15, output:  0.60 },
+  'gemini-2.5-pro':     { input:  1.25, output: 10.00 },
+};
+
+function calculateCost(model, tokensIn, tokensOut) {
+  if (!model || (!tokensIn && !tokensOut)) return 0;
+  // Strip provider prefix (e.g. "google/gemini-2.5-flash" -> "gemini-2.5-flash")
+  const shortModel = model.includes('/') ? model.split('/').pop() : model;
+  // Try exact match, then partial match (e.g. "claude-haiku-3-5-20241022" matches "claude-haiku-3-5")
+  const pricing = MODEL_PRICING[shortModel]
+    || Object.entries(MODEL_PRICING).find(([k]) => shortModel.startsWith(k))?.[1];
+  if (!pricing) return 0;
+  return Number(((tokensIn || 0) * pricing.input / 1e6 + (tokensOut || 0) * pricing.output / 1e6).toFixed(6));
+}
+
+// Usage API snapshot helper — never throws
+async function fetchUsageSnapshot() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const resp = await fetch(USAGE_API_URL, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!resp.ok) return { success: false };
+    const data = await resp.json();
+    return { success: true, session_pct: data?.session?.percent ?? null };
+  } catch {
+    return { success: false };
+  }
+}
+
+// In-memory tracked runs (lost on restart — acceptable for MVP)
+const pendingRuns = new Map();
 
 // Write mutex — prevents race conditions on concurrent writes
 let writeQueue = Promise.resolve();
@@ -582,24 +622,100 @@ app.get('/api/crons', (req, res) => {
   });
 });
 
+// API: Worker Runs — Tracked run flow (start/complete/pending)
+// These MUST be registered before the catch-all POST/GET routes below.
+
+app.get('/api/worker-runs/pending', (req, res) => {
+  const runs = [];
+  for (const [id, run] of pendingRuns) {
+    runs.push({ run_id: id, ...run });
+  }
+  res.json(runs);
+});
+
+app.post('/api/worker-runs/start', async (req, res) => {
+  const { worker, model, ticket_id } = req.body;
+  if (!worker) return res.status(400).json({ error: 'worker field required' });
+  const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const usage = await fetchUsageSnapshot();
+  const run = {
+    worker,
+    model: model || null,
+    ticket_id: ticket_id || null,
+    started_at: new Date().toISOString(),
+    usage_before_pct: usage.success ? usage.session_pct : null,
+  };
+  pendingRuns.set(runId, run);
+  res.json({ run_id: runId, ...run });
+});
+
+app.post('/api/worker-runs/:run_id/complete', async (req, res) => {
+  const { run_id } = req.params;
+  const pending = pendingRuns.get(run_id);
+  if (!pending) return res.status(404).json({ error: 'run_id not found or already completed' });
+
+  const { status, tokens_in, tokens_out, cost_usd, model } = req.body;
+  const usage = await fetchUsageSnapshot();
+  const now = new Date();
+  const durationS = Math.round((now - new Date(pending.started_at)) / 1000);
+  const finalModel = model || pending.model;
+  const finalTokensIn = tokens_in || 0;
+  const finalTokensOut = tokens_out || 0;
+
+  // Auto-calculate cost if not provided
+  let finalCost = cost_usd || 0;
+  if (!finalCost && finalModel && (finalTokensIn || finalTokensOut)) {
+    finalCost = calculateCost(finalModel, finalTokensIn, finalTokensOut);
+  }
+
+  const entry = {
+    run_id,
+    tracked: true,
+    worker: pending.worker,
+    ticket_id: pending.ticket_id,
+    model: finalModel,
+    tokens_in: finalTokensIn,
+    tokens_out: finalTokensOut,
+    cost_usd: finalCost,
+    duration_s: durationS,
+    status: status || 'ok',
+    usage_before_pct: pending.usage_before_pct,
+    usage_after_pct: usage.success ? usage.session_pct : null,
+    timestamp: now.toISOString(),
+  };
+
+  fs.mkdirSync(path.dirname(WORKER_RUNS_FILE), { recursive: true });
+  fs.appendFileSync(WORKER_RUNS_FILE, JSON.stringify(entry) + '\n');
+  pendingRuns.delete(run_id);
+  addLog('worker_run', `[${pending.worker}] ${entry.status} — ${finalModel || 'unknown'} (${durationS}s, $${finalCost})`);
+  res.json(entry);
+});
+
 // API: Worker Runs (POST to log, GET to list)
 app.post('/api/worker-runs', (req, res) => {
   const { worker, ticket_id, model, tokens_in, tokens_out, cost_usd, duration_s, status } = req.body;
   if (!worker) return res.status(400).json({ error: 'worker field required' });
+
+  // Auto-calculate cost if not provided but model + tokens are available
+  let finalCost = cost_usd || 0;
+  if (!finalCost && model && (tokens_in || tokens_out)) {
+    finalCost = calculateCost(model, tokens_in, tokens_out);
+  }
+
   const entry = {
     worker,
     ticket_id: ticket_id || null,
     model: model || null,
     tokens_in: tokens_in || 0,
     tokens_out: tokens_out || 0,
-    cost_usd: cost_usd || 0,
+    cost_usd: finalCost,
     duration_s: duration_s || 0,
     status: status || 'ok',
     timestamp: new Date().toISOString()
   };
   fs.mkdirSync(path.dirname(WORKER_RUNS_FILE), { recursive: true });
   fs.appendFileSync(WORKER_RUNS_FILE, JSON.stringify(entry) + '\n');
-  addLog('worker_run', `[${worker}] ${status || 'ok'} — ${model || 'unknown'} (${duration_s || 0}s)`);
+  addLog('worker_run', `[${worker}] ${status || 'ok'} — ${model || 'unknown'} (${duration_s || 0}s, $${finalCost})`);
   res.json(entry);
 });
 
