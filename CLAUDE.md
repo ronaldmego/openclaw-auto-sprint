@@ -14,9 +14,8 @@
 - [Quick Start](#quick-start)
 - [Comandos Frecuentes](#comandos-frecuentes)
 - [Convenciones de Desarrollo](#convenciones-de-desarrollo)
-- [Workflow Orchestration](#workflow-orchestration)
-- [Task Management](#task-management)
-- [Core Principles](#core-principles)
+- [Boris Dev Principles](#boris-dev-principles)
+- [Skills Relevantes](#skills-relevantes)
 - [Seguridad](#seguridad)
 - [Recursos](#recursos)
 
@@ -302,47 +301,49 @@ curl -s http://100.64.216.28:3401/api/worker-runs?limit=10 | python3 -m json.too
 
 ---
 
-## Workflow Orchestration
+## Boris Dev Principles
 
-### 1. Plan Mode Default
+> **Mandatorio.** Estas reglas aplican a todo proyecto. Solo se pueden adaptar si hay una razón documentada en este mismo archivo.
+
+### Workflow Orchestration
+
+#### 1. Plan Mode Default
 - Entrar en plan mode para cualquier tarea no trivial (3+ pasos o decisiones arquitecturales)
 - Si algo sale mal, PARAR y re-planificar inmediatamente — no seguir empujando
 - Usar plan mode para pasos de verificación, no solo para construir
 - Escribir specs detallados upfront para reducir ambigüedad
 
-### 2. Subagent Strategy
+#### 2. Subagent Strategy
 - Usar subagents liberalmente para mantener el context window principal limpio
 - Delegar research, exploración y análisis paralelo a subagents
 - Para problemas complejos, usar más compute via subagents
 - Una tarea por subagent para ejecución enfocada
 
-### 3. Self-Improvement Loop
+#### 3. Self-Improvement Loop
 - Después de CUALQUIER corrección del usuario: actualizar `tasks/lessons.md` con el patrón
 - Escribir reglas que prevengan el mismo error
 - Iterar en estas lecciones hasta que la tasa de error baje
 - Revisar lecciones al inicio de sesión para el proyecto relevante
 
-### 4. Verification Before Done
+#### 4. Verification Before Done
 - Nunca marcar una tarea como completa sin probar que funciona
 - Comparar behavior entre main y tus cambios cuando sea relevante
 - Preguntarse: "Would a staff engineer approve this?"
 - Correr tests, revisar logs, demostrar correctitud
 
-### 5. Demand Elegance (Balanced)
+#### 5. Demand Elegance (Balanced)
 - Para cambios no triviales: pausar y preguntar "is there a more elegant way?"
 - Si un fix se siente hacky: "Knowing everything I know now, implement the elegant solution"
 - Skip para fixes simples y obvios — no over-engineer
 - Desafiar tu propio trabajo antes de presentarlo
 
-### 6. Autonomous Bug Fixing
+#### 6. Autonomous Bug Fixing
 - Cuando recibas un bug report: solo arréglalo. No pedir que te guíen
 - Apuntar a logs, errores, tests que fallan — luego resolverlos
 - Zero context switching requerido del usuario
 - Arreglar tests de CI que fallan sin que te digan cómo
 
----
-
-## Task Management
+### Task Management
 
 1. **Plan First:** Escribir plan en `tasks/todo.md` con items checkeables
 2. **Verify Plan:** Check in antes de empezar implementación
@@ -351,14 +352,23 @@ curl -s http://100.64.216.28:3401/api/worker-runs?limit=10 | python3 -m json.too
 5. **Document Results:** Agregar sección de review en `tasks/todo.md`
 6. **Capture Lessons:** Actualizar `tasks/lessons.md` después de correcciones
 
----
-
-## Core Principles
+### Core Principles
 
 - **Simplicity First:** Cada cambio tan simple como sea posible. Impacto mínimo en código.
 - **No Laziness:** Encontrar root causes. No fixes temporales. Estándares de senior developer.
 - **Minimal Impact:** Los cambios solo tocan lo necesario. Evitar introducir bugs.
 - **Timeless documentation:** Este archivo contiene visión, arquitectura y convenciones. No bugs, TODOs, ni feature status aquí — eso va en issues o STATUS.md.
+
+---
+
+## Skills Relevantes
+
+| Skill | Cuándo usar |
+|-------|-------------|
+| `frontend-design` | Cambios en UI, nuevos componentes, tabs, modales, rediseños visuales |
+| `github-actions` | CI/CD, workflows de deploy, automations |
+| `feature-dev` | Desarrollo guiado de features con análisis de codebase |
+| `code-review` | Review de PRs antes de merge |
 
 ---
 
