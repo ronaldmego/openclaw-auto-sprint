@@ -294,8 +294,11 @@ curl -s http://100.64.216.28:3401/api/worker-runs?limit=10 | python3 -m json.too
 - **Golden Rules en markdown** — Nunca hardcodear reglas en HTML. Leer de workspace.
 - **`ticket_type` reemplaza `deliverable_type` en UI** — `deliverable_type` se mantiene en schema por backward compat pero NO se muestra en la interfaz.
 
-### ⚠️ Deuda técnica conocida
-- `public/index.html` (~1500 líneas) — Monolito que mezcla HTML, CSS y JS. Debe refactorizarse en `index.html` + `styles.css` + `app.js` como mínimo. Issue pendiente.
+### ⚠️ Playwright — Schedule Tab Prohibido
+- **NUNCA usar Playwright para interactuar o hacer snapshot del tab Schedule**
+- El tab carga `calendar.html` en un iframe con un grid de 24h×7 días (168+ celdas) + emojis en nombres de crons
+- Playwright serializa el DOM a ~900K chars con surrogate pairs UTF-16 inválidos → crash de la API de Claude (`"no low surrogate in string"`)
+- Para verificar el Schedule: leer código directamente o pedir screenshot manual al usuario
 
 ---
 
