@@ -41,7 +41,7 @@ OAS es un **tablero Kanban + API REST** donde humanos y agentes AI coordinan tra
 | Puerto | `3401` (Tailscale only) |
 | Bind | `OCC_HOST` env var (default `127.0.0.1`) |
 | URL (Ronald) | `http://100.64.216.28:3401` |
-| Proceso | PM2: `occ` |
+| Proceso | PM2: `oas` |
 | Repo | `ronaldmego/openclaw-auto-sprint` |
 
 ---
@@ -243,7 +243,7 @@ curl -X POST http://100.64.216.28:3401/api/worker-runs \
 ```bash
 npm install
 cp .env.example .env  # Edit host/port/workspace
-node server.js         # or: pm2 restart occ
+node server.js         # or: pm2 restart oas
 ```
 
 ---
@@ -252,10 +252,10 @@ node server.js         # or: pm2 restart occ
 
 ```bash
 # Restart
-pm2 restart occ
+pm2 restart oas
 
 # Logs
-pm2 logs occ --lines 50
+pm2 logs oas --lines 50
 
 # API test
 curl -s http://100.64.216.28:3401/api/tasks | python3 -m json.tool | head -20
